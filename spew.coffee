@@ -1,12 +1,7 @@
 net = require 'net'
 server = net.createServer()
 
-logger =
-  log: (args...) ->
-    escape_newlines = (s) ->
-      if typeof s is 'string' then s.replace /\n/g, "\\n"
-      else s
-    console.log (escape_newlines s for s in args)...
+logger = console
 
 server.on 'listening', ->
   logger.log "Listening on", @address()
