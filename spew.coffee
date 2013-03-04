@@ -12,36 +12,43 @@ server.on 'listening', ->
   logger.log "Listening on", @address()
 
 server.on 'connection', (socket) ->
-  client = socket.remoteAddress + ":" + socket.remotePort
-  socket.log = (args...) -> logger.log "Client", client, args...
-  socket.stopped = false
+  client =
+    client: socket.remoteAddress + ":" + socket.remotePort
+    log: (args...) -> logger.log "Client", @client, args...
+    stopped: false
 
-  socket.on 'data', (buffer) ->
+  process_command = (buffer) ->
     switch buffer.toString()
       when "shutdown\n"
-        socket.log "sent shutdown command"
+        client.log "sent shutdown command"
         server.close()
+        true
       when "quit\n"
-        socket.log "sent quit command"
-        socket.stopped = true
+        client.log "sent quit command"
+        client.stopped = true
         socket.end()
+        true
       when "stop\n"
-        socket.log "sent stop command"
-        socket.stopped = true
-      else
-        socket.log "sent", buffer
-        spew = (data, callback) ->
-            unless socket.stopped
-              socket.write data, null, ->
-                  socket.setTimeout 1000, -> spew data, spew
-        spew buffer, spew
-        socket.stopped = false
+        client.log "sent stop command"
+        client.stopped = true
+        true
+      else false
 
-  socket.on 'close', -> socket.log "disconnected"
+  socket.on 'data', (buffer) ->
+    if !process_command buffer
+      client.log "sent", buffer
+      client.stopped = false
+      spew = (data, callback) ->
+          unless client.stopped
+            socket.write data, null, ->
+                socket.setTimeout 1000, -> spew data, spew
+      spew buffer, spew
 
-  socket.on 'error', (error) -> socket.log error
+  socket.on 'close', -> client.log "disconnected"
 
-  socket.log "connected"
+  socket.on 'error', (error) -> client.log error
+
+  client.log "connected"
 
 server.on 'close', ->
   logger.log "Shutting down"
