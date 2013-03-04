@@ -8,36 +8,36 @@ server.on 'listening', ->
 
 server.on 'connection', (socket) ->
   client =
+    socket: socket
     client: socket.remoteAddress + ":" + socket.remotePort
     log: (args...) -> logger.log "Client", @client, args...
-    stopped: false
+    hushed: false
+    hush: -> @hushed = true
+    spew: (data) ->
+      unless @hushed
+        socket.write data, null, =>
+          socket.setTimeout 1000, => @spew data
+    spam: (data) ->
+      @hushed = false
+      @spew data
+    quit: ->
+      @hushed = false
+      @socket.end()
 
-  process_command = (buffer) ->
+  socket.on 'data', (buffer) ->
     switch buffer.toString()
       when "shutdown\n"
         client.log "sent shutdown command"
         server.close()
-        true
       when "quit\n"
         client.log "sent quit command"
-        client.stopped = true
-        socket.end()
-        true
+        client.quit()
       when "stop\n"
         client.log "sent stop command"
-        client.stopped = true
-        true
-      else false
-
-  socket.on 'data', (buffer) ->
-    if !process_command buffer
-      client.log "sent", buffer
-      client.stopped = false
-      spew = (data, callback) ->
-          unless client.stopped
-            socket.write data, null, ->
-                socket.setTimeout 1000, -> spew data, spew
-      spew buffer, spew
+        client.hush()
+      else
+        client.log "sent", buffer
+        client.spam buffer
 
   socket.on 'close', -> client.log "disconnected"
 
