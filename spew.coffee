@@ -21,18 +21,20 @@ server.on 'connection', (socket) ->
       @hushed = false
       @spew data
     quit: ->
-      @hushed = false
+      @hushed = true
       @socket.end()
 
+  command_from_buffer = (b) -> b.toString().replace(/\r?\n$/, '')
+
   socket.on 'data', (buffer) ->
-    switch buffer.toString()
-      when "shutdown\n"
+    switch command_from_buffer buffer
+      when "shutdown"
         client.log "sent shutdown command"
         server.close()
-      when "quit\n"
+      when "quit"
         client.log "sent quit command"
         client.quit()
-      when "stop\n"
+      when "stop"
         client.log "sent stop command"
         client.hush()
       else
