@@ -3,20 +3,24 @@ server = net.createServer()
 
 logger = console
 
+carrier = require 'carrier'
+
 server.on 'listening', ->
   logger.log "Listening on", @address()
 
 server.on 'connection', (socket) ->
+  socket.setMaxListeners 0
   client =
     socket: socket
+    carrier: carrier.carry socket
     client: socket.remoteAddress + ":" + socket.remotePort
     log: (args...) -> logger.log "Client", @client, args...
     hushed: false
     hush: -> @hushed = true
     spew: (data) ->
-      unless @hushed
-        socket.write data, null, =>
-          socket.setTimeout 1000, => @spew data
+      @socket.setTimeout 1000, =>
+        unless @hushed
+          @socket.write data, null, => @spew data
     spam: (data) ->
       @hushed = false
       @spew data
@@ -24,10 +28,8 @@ server.on 'connection', (socket) ->
       @hushed = true
       @socket.end()
 
-  command_from_buffer = (b) -> b.toString().replace(/\r?\n$/, '')
-
-  socket.on 'data', (buffer) ->
-    switch command_from_buffer buffer
+  client.carrier.on 'line', (line) ->
+    switch line
       when "shutdown"
         client.log "sent shutdown command"
         server.close()
@@ -38,8 +40,8 @@ server.on 'connection', (socket) ->
         client.log "sent stop command"
         client.hush()
       else
-        client.log "sent", buffer
-        client.spam buffer
+        client.log "sent", line
+        client.spam line + "\r\n"
 
   socket.on 'close', -> client.log "disconnected"
 
