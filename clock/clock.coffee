@@ -1,6 +1,9 @@
 timers = require 'timers'
 events = require 'events'
 
+# This is what an event-emitting clock might look like if you used
+# Timers.setInterval().
+#
 class NativeClock extends events.EventEmitter
   constructor: (@interval = 1000) ->
 
@@ -21,6 +24,9 @@ class NativeClock extends events.EventEmitter
 
 exports.NativeClock = NativeClock
 
+# But to really demonstrate the evented nature of nodejs, let's try it with
+# only Timers.setTimeout().
+#
 class Clock extends events.EventEmitter
   constructor: (@interval = 1000) ->
 
@@ -42,6 +48,9 @@ class Clock extends events.EventEmitter
 
 exports.Clock = Clock
 
+# If you wanted extend such a clock to automatically stop after a limited number
+# of ticks, you could do this.
+#
 class LimitedClock extends NativeClock
   constructor: (@interval = 1000, @limit = -1) ->
     @ticks = 0
@@ -53,6 +62,9 @@ class LimitedClock extends NativeClock
 
 exports.LimitedClock = LimitedClock
 
+# But composition would let you limit any kind of clock without having to
+# choose your implementation at compile time. So...
+#
 class TickLimiter extends events.EventEmitter
   constructor: (@clock, @limit = -1) ->
     @ticks = 0
