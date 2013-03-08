@@ -84,3 +84,24 @@ class TickLimiter extends events.EventEmitter
       do (event) => origin.on event, (args...) => @emit event, args...
 
 exports.TickLimiter = TickLimiter
+
+class TestClock extends events.EventEmitter
+  constructor: (@interval) ->
+
+  tick: ->
+    if @running
+      @emit 'tick'
+      timers.setTimeout (=> @tick()), @interval
+
+  start: ->
+    unless @running
+      @emit 'start'
+      @running = true
+      @tick()
+
+  stop: ->
+    if @running
+      @running = false
+      @emit 'stop'
+
+exports.TestClock = TestClock
