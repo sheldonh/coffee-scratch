@@ -1,44 +1,23 @@
-timers = require 'timers'
-events = require 'events'
+Timers = require 'timers'
+{EventEmitter} = require 'events'
 
-# This is what an event-emitting clock might look like if you used
+# To really explore the evented nature of nodejs, let's try to build a clock
+# using only Timers.setTimeout(). Otherwise, we just end up using
 # Timers.setInterval().
 #
-class NativeClock extends events.EventEmitter
-  constructor: (@interval = 1000) ->
 
-  tick: ->
-    @emit 'tick'
-
-  start: ->
-    unless @timer
-      @emit 'start'
-      @tick()
-      @timer = timers.setInterval (=> @tick()), @interval
-
-  stop: ->
-    if @timer
-      timers.clearInterval(@timer)
-      @timer = null
-      @emit 'stop'
-
-exports.NativeClock = NativeClock
-
-# But to really demonstrate the evented nature of nodejs, let's try it with
-# only Timers.setTimeout().
-#
-class Clock extends events.EventEmitter
+class Clock extends EventEmitter
   constructor: (@interval = 1000) ->
 
   tick: ->
     if @running
       @emit 'tick'
-      timers.setTimeout (=> @tick()), @interval
+      Timers.setTimeout (=> @tick()), @interval
 
   start: ->
     unless @running
-      @running = true
       @emit 'start'
+      @running = true
       @tick()
 
   stop: ->
@@ -51,7 +30,7 @@ exports.Clock = Clock
 # If you wanted extend such a clock to automatically stop after a limited number
 # of ticks, you could do this.
 #
-class LimitedClock extends NativeClock
+class LimitedClock extends Clock
   constructor: (@interval = 1000, @limit = -1) ->
     @ticks = 0
 
@@ -65,7 +44,7 @@ exports.LimitedClock = LimitedClock
 # But composition would let you limit any kind of clock without having to
 # choose your implementation at compile time. So...
 #
-class TickLimiter extends events.EventEmitter
+class TickLimiter extends EventEmitter
   constructor: (@clock, @limit = -1) ->
     @ticks = 0
     @propagate_events @clock, 'start', 'stop', 'tick'
@@ -85,23 +64,3 @@ class TickLimiter extends events.EventEmitter
 
 exports.TickLimiter = TickLimiter
 
-class TestClock extends events.EventEmitter
-  constructor: (@interval) ->
-
-  tick: ->
-    if @running
-      @emit 'tick'
-      timers.setTimeout (=> @tick()), @interval
-
-  start: ->
-    unless @running
-      @emit 'start'
-      @running = true
-      @tick()
-
-  stop: ->
-    if @running
-      @running = false
-      @emit 'stop'
-
-exports.TestClock = TestClock

@@ -1,0 +1,13 @@
+{
+  "name": "clock",
+  "version": "0.0.1",
+  "description": "Exploring evented programming",
+  "main": "clocks.coffee",
+  "scripts": {
+    "test": "cake test"
+  },
+  "devDependencies": {
+    "mocha": "~1.8.1"
+  },
+  "license": "BSD"
+}
