@@ -1,69 +1,37 @@
 {EventEmitter} = require 'events'
-net = require 'net'
-carrier = require 'carrier'
 
-server = net.createServer()
-server.on 'listening', ->
-  console.log "Listening on", @address()
-
-class Service extends EventEmitter
+class Service
   constructor: -> @clients = []
 
   connect: (client) ->
-    @notify "#{client.name} connected"
     @clients.push client
-    client.on 'nick', (nick, previous) => @notify "#{previous} renamed to #{nick}", client
-    client.on 'line', (line) => @send line, client
-    client.on 'disconnect', => @disconnect client
+    @announce_client_connect client
+    client.on 'send', (message) => @on_client_send client, message
 
-  disconnect: (client) ->
-    client.removeAllListeners 'disconnect'
-    client.removeAllListeners 'line'
-    client.removeAllListeners 'nick'
-    @clients = @clients.filter (c) -> c isnt client
-    @notify "#{client.name} disconnected"
+  announce_client_connect: (client) ->
+    @assure_message {action: 'connect', data: client.id}, (assured) => @broadcast assured
 
-  broadcast: (prefix, message, excluded_client) ->
+  on_client_send: (client, message) ->
+    message.sender = client.id
+    @assure_message message, (assured) => @broadcast assured
+
+  broadcast: (message, callback) ->
     for client in @clients
-      client.send "#{prefix} #{message}" unless client is excluded_client
+      client.receive message unless client.id is message.sender
+    callback? message
 
-  send: (message, sender) ->
-    @broadcast "#{sender.name}:", message, sender
+  assure_message: (message, callback) ->
+    if message.action is 'say' or message.action is 'connect'
+      callback? {action: message.action, data: message.data, sender: message.sender}
 
-  notify: (message, excluded_client) ->
-    @broadcast '>>>', message, excluded_client
-
-service = new Service()
+exports.Service = Service
 
 class Client extends EventEmitter
-  constructor: (@socket) ->
-    @carrier = carrier.carry(socket)
-    @name = "#{socket.remoteAddress}:#{socket.remotePort}"
+  constructor: (@id) ->
 
-    @carrier.on 'line', (line) => @receive line
-    @socket.on 'close', => @disconnect()
+  send: (message) -> @emit 'send', message
 
-  receive: (line) ->
-    if line == '.quit'
-      @disconnect()
-    else if (nick_command = /^.nick\s+(\S+)$/.exec line)?
-      @nick nick_command[1]
-    else
-      @emit 'line', line
+  receive: (message) -> @emit 'receive', message
 
-  nick: (name) ->
-    @emit 'nick', name, @name
-    @name = name
+exports.Client = Client
 
-  send: (message) ->
-    @socket.write "#{message}\r\n"
-
-  disconnect: ->
-    @emit 'disconnect'
-    @socket.removeListener 'close', => @disconnect()
-    @socket.end()
-
-server.on 'connection', (socket) ->
-  service.connect new Client(socket)
-
-server.listen 8000
