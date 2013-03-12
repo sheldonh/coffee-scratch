@@ -1,6 +1,9 @@
 Chat = require './chat'
 assert = require('assert')
 
+# TODO most of these tests need to call done() to prove that we actually
+# got the event we use to make assertions.
+
 describe 'Chat.Service', ->
 
   service = sender = receiver = null
@@ -23,11 +26,19 @@ describe 'Chat.Service', ->
     sender.send {action: 'illegal', data: 'data'}
 
   it 'excludes sender from broadcast', ->
-    sender.on 'receive', (received) -> assert null, 'sender received own message'
+    sender.on 'receive', -> assert null, 'sender received own message'
     sender.send {action: 'say', data: 'Hi!'}
 
   it 'accounces new clients connecting', ->
     new_client = new Chat.Client('bundy')
-    receiver.on 'receive', (received) -> assert received.data is new_client.id
+    receiver.on 'receive', (received) -> assert.equal received.sender, new_client.id
     service.connect new_client
 
+  it 'does not send the connection announcement to the connecting client', ->
+    new_client = new Chat.Client('bundy')
+    new_client.on 'receive', -> assert null, 'announcement sent to connecting client'
+    service.connect new_client
+
+  it 'announces clients disconnecting', ->
+    receiver.on 'receive', (received) -> assert.equal received.sender, sender.id
+    service.disconnect sender
