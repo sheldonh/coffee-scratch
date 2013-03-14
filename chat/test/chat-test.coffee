@@ -42,3 +42,16 @@ describe 'Chat.Service', ->
   it 'announces clients disconnecting', ->
     receiver.on 'receive', (received) -> assert.equal received.sender, sender.id
     service.disconnect sender
+
+  it 'announces client name changes', (done) ->
+    receiver.on 'receive', (received) ->
+      assert.equal received.action, 'identify'
+      assert.equal received.sender, 'bill'
+      assert.equal received.data, 'evenmorebill'
+      done()
+    sender.send {action: 'identify', data: 'evenmorebill'}
+
+  it 'refuses client changing name to name of another client', ->
+    receiver.on 'receive', -> assert null, 'identify accepted for existing name'
+    sender.send {action: 'identify', data: receiver.id}
+

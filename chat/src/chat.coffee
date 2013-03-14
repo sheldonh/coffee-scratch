@@ -24,12 +24,13 @@ class Service
     callback? message
 
   assure_message: (message, callback) ->
-    if @is_allowed_action message.action
-      callback? {action: message.action, data: message.data, sender: message.sender}
+    message = @canonicalize_message message
+    switch message.action
+      when 'connect', 'disconnect', 'say' then callback? message
+      when 'identify' then callback? message unless @clients.some (c) -> c.id is message.data
 
-  is_allowed_action: (action) ->
-    allowed_actions = ['connect', 'disconnect', 'say']
-    allowed_actions.some (allowed) -> action is allowed
+  canonicalize_message: (message) ->
+    {action: message.action, data: message.data, sender: message.sender}
 
 exports.Service = Service
 
