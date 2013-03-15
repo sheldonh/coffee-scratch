@@ -9,19 +9,39 @@
     <script src="/lib/launch.js"></script>
     <title>Chat</title>
     <style>
+      #chat-client {
+        width: 40em;
+        color: #404040;
+      }
       #chat-box .notice {
         font-style: italic;
+        color: gray;
       }
       #chat-box, #chat-input {
-        width: 40em;
+        border-style: solid;
+        border-width: thin;
+        border-color: gray;
+        width: 100%;
+      }
+      #chat-box {
+        height: 20em;
+        overflow-y:scroll;
+        vertical-align: bottom;
+      }
+      #chat-box {
+        position: relative;
+      }
+      #chat-box span.sink {
+        position: absolute;
+        bottom: 0;
       }
     </style>
   </head>
   <body>
     <h1>Chat</h1>
     <div id='chat-client'>
-      <input id='chat-input' type='text' />
-      <div id='chat-box' />
+      <div id='chat-box'></div>
+      <div><input id='chat-input' type='text' /></div>
     </div>
   </body>
 </html>

@@ -15,33 +15,45 @@ web_request_handler = (req, res) ->
 web_server = require('http').createServer web_request_handler
 io = require('socket.io').listen web_server
 
-guest_counter = 0
-identities = {}
+class Service
+  constructor: ->
+    @guest_counter = 0
+    @identities = {}
 
-io.sockets.on 'connection', (socket) ->
-  initial_identity = "guest#{++guest_counter}"
+  connect: (id, callback) ->
+    identity = "guest#{++@guest_counter}"
+    @identities[identity] = id
+    callback identity
 
-  console.log socket.id, 'connected with initial identity', initial_identity
-  identities[initial_identity] = socket.id
-  socket.emit 'data', {action: 'welcome', data: initial_identity}
+  disconnect: (id, callback) ->
+    for candidate of @identities
+      if @identities[candidate] is id
+        delete @identities[candidate]
+        callback candidate
 
-  socket.on 'data', (data) ->
-    if socket.id isnt identities[data.sender]
-      console.log socket.id, "attempted to masquerade as", data.sender
-    else
+  receive: (id, data, callback) ->
+    if @assure_data id, data
       switch data.action
         when 'identify'
-          unless identities[data.data]?
-            identities[data.data] = socket.id
-            delete identities[data.sender]
-            io.sockets.emit 'data', {action: data.action, sender: data.sender, data: data.data}
-          console.log "identities:", identities
+          unless @identities[data.data]?
+            @identities[data.data] = id
+            delete @identities[data.sender]
+            callback data
         when 'say'
-          io.sockets.emit 'data', {action: data.action, sender: data.sender, data: data.data}
+          callback data
 
-  socket.on 'disconnect', ->
-    console.log socket.id, 'disconnected'
-    for identity of identities
-      delete identities[identity] if identities[identity] is socket.id
+  assure_data: (id, data) -> id is @identities[data.sender]
+
+service = new Service()
+
+io.sockets.on 'connection', (socket) ->
+  service.connect socket.id, (initial_identity) ->
+    socket.emit 'data', {action: 'welcome', data: initial_identity}
+    socket.broadcast.emit 'data', {sender: initial_identity, action: 'connect'}
+
+  socket.on 'data', (data) -> service.receive socket.id, data, (accepted) -> io.sockets.emit 'data', accepted
+
+  socket.on 'disconnect', -> service.disconnect socket.id, (parting_identity) ->
+    io.sockets.emit 'data', {sender: parting_identity, action: 'disconnect'}
 
 web_server.listen(8000)
