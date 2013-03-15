@@ -5,7 +5,7 @@ web_request_handler = (req, res) ->
   # Directory traversal vulnerability
   fs.readFile "#{__dirname}/../#{url}", (error, data) ->
     if not error
-      res.writeHead(200)
+      res.writeHead(200, {'Content-Type': 'text/html'})
       res.end data
     else
       res.writeHead 500
