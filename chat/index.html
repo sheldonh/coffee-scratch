@@ -3,13 +3,25 @@
   <head>
     <meta charset="utf-8" />
     <script src="/socket.io/socket.io.js"></script>
-    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script src="http://cachedcommons.org/cache/jquery/1.4.2/javascripts/jquery-min.js"></script>
+    <script src="http://cachedcommons.org/cache/jquery-cookie/0.0.0/javascripts/jquery-cookie-min.js"></script>
+    <script src="http://cachedcommons.org/cache/jquery-ui/1.8.4/javascripts/jquery-ui-min.js"></script>
     <script src="/lib/launch.js"></script>
     <title>Chat</title>
+    <style>
+      #chat-box .notice {
+        font-style: italic;
+      }
+      #chat-box, #chat-input {
+        width: 40em;
+      }
+    </style>
   </head>
   <body>
     <h1>Chat</h1>
-    <input id='chat-input' type='text' />
-    <div id='chat' />
+    <div id='chat-client'>
+      <input id='chat-input' type='text' />
+      <div id='chat-box' />
+    </div>
   </body>
 </html>
