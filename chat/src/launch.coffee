@@ -1,4 +1,5 @@
 socket = io.connect("http://localhost:8000")
+{EventEmitter} = require 'events'
 
 class ChatBox
   constructor: (dom_id) ->
@@ -31,10 +32,26 @@ class ChatBox
     div.effect 'highlight'
     @element.scrollTop @element[0].scrollHeight
 
-#class InputBox extends EventEmitter
-#  constructor: (dom_id) -> @element = $(dom_id)
+class InputBox extends EventEmitter
+  constructor: (dom_id) ->
+    @element = $(dom_id)
+    @element.bind 'keyup', (e) ->
+      if e.which is 13
+        if matched = @element.val().match /^\/nick\s+(\S+)/
+          @emit 'data', {sender: myself, action: 'identify', data: matched[1]}
+        else
+          @emit 'data', {sender: myself, action: 'say', data: @element.val()}
+        @element.val('')
+
+  focus: ->
+    @element.focus()
+    @
 
 $(document).ready ->
+
+  input = new InputBox('#chat-input')
+  input.on 'data', (data) -> socket.emit 'data', data
+  input.focus()
 
   myself = null
   chatbox = new ChatBox('#chat-box')
@@ -46,15 +63,6 @@ $(document).ready ->
         chatbox.present data
         if preferred = $.cookie 'identity'
           socket.emit 'data', {sender: myself, action: 'identify', data: preferred}
-        input = $('#chat-input')
-        input.bind 'keyup', (e) ->
-          if e.which is 13
-            if matched = input.val().match /^\/nick\s+(\S+)/
-              socket.emit 'data', {sender: myself, action: 'identify', data: matched[1]}
-            else
-              socket.emit 'data', {sender: myself, action: 'say', data: input.val()}
-            input.val('')
-        input.focus()
     else
       if data.action is 'identify' and data.sender is myself
         myself = data.data

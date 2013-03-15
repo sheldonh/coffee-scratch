@@ -4,8 +4,11 @@ task 'launch', 'launch service on port 8000', -> build ->
   node.stdout.on 'data', console_log
   node.stderr.on 'data', console_log
 
+browserify = (callback) ->
+  launch 'node_modules/.bin/browserify', ['lib/launch.js', '-o', 'lib/launch-bundle.js'], callback
+
 # ** Cakefile Template ** is a Template for a common Cakefile that you may use in a coffeescript nodejs project.
-# 
+#
 # It comes baked in with 5 tasks:
 #
 # * build - compiles your src directory to your lib directory
@@ -57,7 +60,7 @@ task 'docs', 'generate documentation', -> docco()
 # ```
 # cake build
 # ```
-task 'build', 'compile source', -> build -> log ":)", green
+task 'build', 'compile source', -> build -> browserify -> log ":)", green
 
 # ## *watch*
 #
