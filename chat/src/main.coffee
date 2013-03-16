@@ -13,7 +13,7 @@ web_request_handler = (req, res) ->
       res.end "error reading #{url}"
 
 web_server = require('http').createServer web_request_handler
-io = require('socket.io').listen web_server
+io = require('socket.io').listen web_server, {log: false}
 
 class Service
   constructor: ->

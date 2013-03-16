@@ -28,6 +28,15 @@
         overflow-y:scroll;
         vertical-align: bottom;
       }
+      #chat-titlebar {
+        width: 100%;
+      }
+      #chat-room {
+        float: clear;
+      }
+      #chat-identity {
+        float: right;
+      }
       #chat-box {
         position: relative;
       }
@@ -40,8 +49,12 @@
   <body>
     <h1>Chat</h1>
     <div id='chat-client'>
+      <div id='chat-titlebar'>
+        <div id='chat-identity'></div>
+        <div id='chat-room'>&nbsp;</div>
+      </div>
       <div id='chat-box'></div>
-      <div><input id='chat-input' type='text' /></div>
+      <div><input id='chat-input' name='chat-input' type='text' /></div>
     </div>
   </body>
 </html>

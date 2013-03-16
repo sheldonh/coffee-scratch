@@ -1,5 +1,7 @@
-socket = io.connect("http://localhost:8000")
 {EventEmitter} = require 'events'
+
+socket = io.connect("http://localhost:8000")
+send_packet = (data) -> socket.emit 'data', data
 
 class ChatBox
   constructor: (dom_id) ->
@@ -47,26 +49,44 @@ class InputBox extends EventEmitter
     @element.focus()
     @
 
+class ChatIdentity extends EventEmitter
+  constructor: (dom_id) ->
+    @element = $(dom_id)
+    @identity = null
+
+  accept: (identity, callback) ->
+    @set identity
+    @emit 'prefer', preferred if preferred = $.cookie 'identity'
+
+  prefer: (identity) ->
+    @set identity
+    $.cookie 'identity', @identity
+
+  set: (identity) ->
+    @element.html(@identity = identity)
+    @element.effect 'highlight'
+
+  myself: -> @identity
+
 $(document).ready ->
 
-  input = new InputBox('#chat-input')
-  input.on 'nick', (data) -> socket.emit 'data', {action: 'identify', data: data.identity}
-  input.on 'input', (data) -> socket.emit 'data', {action: 'say', data: data.message}
-  input.focus()
+  identity = new ChatIdentity('#chat-identity')
+  identity.on 'prefer', (preferred) -> send_packet {action: 'identify', data: preferred}
 
-  myself = null
   chatbox = new ChatBox('#chat-box')
 
+  input = new InputBox('#chat-input')
+  input.on 'nick', (data) -> send_packet {action: 'identify', data: data.identity}
+  input.on 'input', (data) -> send_packet {action: 'say', data: data.message}
+  input.focus()
+
   socket.on 'data', (data) ->
-    if not myself?
+    if not identity.myself()?
       if data.action is 'welcome'
-        myself = data.data
+        identity.accept data.data
         chatbox.present data
-        if preferred = $.cookie 'identity'
-          socket.emit 'data', {action: 'identify', data: preferred}
     else
-      if data.action is 'identify' and data.sender is myself
-        myself = data.data
-        $.cookie 'identity', myself
+      if data.action is 'identify' and data.sender is identity.myself()
+        identity.prefer data.data
       chatbox.present data
 
