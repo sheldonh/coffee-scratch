@@ -50,8 +50,8 @@ class InputBox extends EventEmitter
 $(document).ready ->
 
   input = new InputBox('#chat-input')
-  input.on 'nick', (data) -> socket.emit 'data', {sender: myself, action: 'identify', data: data.identity}
-  input.on 'input', (data) -> socket.emit 'data', {sender: myself, action: 'say', data: data.message}
+  input.on 'nick', (data) -> socket.emit 'data', {action: 'identify', data: data.identity}
+  input.on 'input', (data) -> socket.emit 'data', {action: 'say', data: data.message}
   input.focus()
 
   myself = null
@@ -63,7 +63,7 @@ $(document).ready ->
         myself = data.data
         chatbox.present data
         if preferred = $.cookie 'identity'
-          socket.emit 'data', {sender: myself, action: 'identify', data: preferred}
+          socket.emit 'data', {action: 'identify', data: preferred}
     else
       if data.action is 'identify' and data.sender is myself
         myself = data.data

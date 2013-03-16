@@ -32,17 +32,18 @@ class Service
         callback candidate
 
   receive: (id, data, callback) ->
-    if @assure_data id, data
-      switch data.action
-        when 'identify'
-          unless @identities[data.data]?
-            @identities[data.data] = id
-            delete @identities[data.sender]
-            callback data
-        when 'say'
+    data = {sender: @sender_identity(id), action: data.action, data: data.data}
+    switch data.action
+      when 'identify'
+        unless @identities[data.data]?
+          @identities[data.data] = id
+          delete @identities[data.sender]
           callback data
+      when 'say'
+        callback data
 
-  assure_data: (id, data) -> id is @identities[data.sender]
+  sender_identity: (id) ->
+    (x for x of @identities when @identities[x] is id)[0]
 
 service = new Service()
 
@@ -51,7 +52,8 @@ io.sockets.on 'connection', (socket) ->
     socket.emit 'data', {action: 'welcome', data: initial_identity}
     socket.broadcast.emit 'data', {sender: initial_identity, action: 'connect'}
 
-  socket.on 'data', (data) -> service.receive socket.id, data, (accepted) -> io.sockets.emit 'data', accepted
+  socket.on 'data', (data) ->
+    service.receive socket.id, data, (accepted) -> io.sockets.emit 'data', accepted
 
   socket.on 'disconnect', -> service.disconnect socket.id, (parting_identity) ->
     io.sockets.emit 'data', {sender: parting_identity, action: 'disconnect'}
