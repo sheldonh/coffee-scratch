@@ -35,12 +35,12 @@ class ChatBox
 class InputBox extends EventEmitter
   constructor: (dom_id) ->
     @element = $(dom_id)
-    @element.bind 'keyup', (e) ->
+    @element.bind 'keyup', (e) =>
       if e.which is 13
         if matched = @element.val().match /^\/nick\s+(\S+)/
-          @emit 'data', {sender: myself, action: 'identify', data: matched[1]}
+          @emit 'nick', {identity: matched[1]}
         else
-          @emit 'data', {sender: myself, action: 'say', data: @element.val()}
+          @emit 'input', {message: @element.val()}
         @element.val('')
 
   focus: ->
@@ -50,7 +50,8 @@ class InputBox extends EventEmitter
 $(document).ready ->
 
   input = new InputBox('#chat-input')
-  input.on 'data', (data) -> socket.emit 'data', data
+  input.on 'nick', (data) -> socket.emit 'data', {sender: myself, action: 'identify', data: data.identity}
+  input.on 'input', (data) -> socket.emit 'data', {sender: myself, action: 'say', data: data.message}
   input.focus()
 
   myself = null
