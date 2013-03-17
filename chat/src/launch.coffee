@@ -8,7 +8,7 @@ class ChatBox
     @element = $(dom_id)
     @escaper = $('<div>')
 
-  present: (data) ->
+  receive: (data) ->
     switch data.action
       when 'welcome'
         [style, message] = ["notice", "You have connected as #{@mark_up 'identity', data.data}. Use the /nick command to rename."]
@@ -53,55 +53,67 @@ class InputBox extends EventEmitter
 class ChatIdentity extends EventEmitter
   constructor: (dom_id) ->
     @element = $(dom_id)
-    @identity = null
+    @myself = null
 
-  accept: (identity, callback) ->
-    @set identity
-    @emit 'prefer', preferred if preferred = $.cookie 'identity'
+  receive: (data) ->
+    switch data.action
+      when 'welcome'
+        @change data.data
+        @prefer_identity_from_cookie()
+      when 'identify'
+        if data.sender is @myself
+          @change data.data
+          @save_preferred_identity_in_cookie
 
-  prefer: (identity) ->
-    @set identity
-    $.cookie 'identity', @identity
+  change: (identity) ->
+    @myself = identity
+    @display()
 
-  set: (identity) ->
-    @element.html(@identity = identity)
+  display: ->
+    @element.html(@myself)
     @element.effect 'highlight'
 
-  myself: -> @identity
+  prefer_identity_from_cookie: ->
+    @emit 'prefer', preferred if preferred = $.cookie 'identity'
+
+  save_preferred_identity_in_cookie: -> $.cookie 'identity', @myself
 
 class ChatIdentityList
   constructor: (dom_id) ->
     @element = $(dom_id)
     @identities = []
-    @my_identity = null
+    @myself = null
 
-  list: (identities) ->
-    if identities?
-      @identities = identities
-      @display()
-    @identities
+  receive: (data) ->
+    switch data.action
+      when 'welcome'
+        @myself = data.data
+        @display()
+      when 'identify'
+        if data.sender is @myself
+          @myself = data.data
+        @rename data.sender, data.data
+        @display()
+      when 'members'
+        @identities = data.data
+        @display
 
-  myself: (identity) ->
-    if identity?
-      console.log "setting my identity to", identity
-      @my_identity = identity
-      @display()
-    @my_identity
+  rename: (from, to) ->
+    @identities[i] = to if (i = @identities.indexOf from) >= 0
 
   display: ->
-    console.log "excluding my identity", @my_identity
     @element.empty();
-    @element.append(@mark_up identity) for identity in @identities when identity isnt @my_identity
+    @element.append(@mark_up identity) for identity in @identities when identity isnt @myself
 
   mark_up: (identity) ->
     "<div class='identity'>#{identity}</div>"
 
 $(document).ready ->
 
+  identity_list = new ChatIdentityList('#chat-identity-list')
+
   identity = new ChatIdentity('#chat-identity')
   identity.on 'prefer', (preferred) -> send_packet {action: 'identify', data: preferred}
-
-  identity_list = new ChatIdentityList('#chat-identity-list')
 
   chatbox = new ChatBox('#chat-box')
 
@@ -111,16 +123,7 @@ $(document).ready ->
   input.focus()
 
   socket.on 'data', (data) ->
-    switch data.action
-      when 'welcome'
-        identity.accept data.data
-        identity_list.myself data.data
-        send_packet {action: 'members'}
-      when 'identify'
-        if data.action is 'identify' and data.sender is identity.myself()
-          identity.prefer data.data
-          identity_list.myself data.data
-      when 'members'
-        identity_list.list data.data
-    chatbox.present data
+    console.log 'received', data
+    component.receive data for component in [chatbox, identity, identity_list]
 
+  send_packet {action: 'members'}
