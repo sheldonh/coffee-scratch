@@ -20,6 +20,8 @@ class ChatBox
         [style, message] = ["notice", "#{@mark_up 'identity', data.sender} now identifies as #{@mark_up 'identity', data.data}"]
       when 'say'
         [style, message] = ["message", "#{@mark_up 'identity', data.sender}: #{@mark_up 'message', data.data}"]
+      when 'error'
+        [style, message] = ["error", data.data]
       else
         console.log "discarding unpresentable message", data
         return
@@ -38,13 +40,17 @@ class ChatBox
 class InputBox extends EventEmitter
   constructor: (dom_id) ->
     @element = $(dom_id)
-    @element.bind 'keyup', (e) =>
-      if e.which is 13
-        if matched = @element.val().match /^\/nick\s+(\S+)/
-          @emit 'nick', {identity: matched[1]}
-        else
-          @emit 'input', {message: @element.val()}
-        @element.val('')
+    @element.bind 'keyup', (e) => @receive() if e.which is 13
+
+  receive: ->
+    text = @element.val()
+    if match = text.match /^\/nick\s+(.+)/
+      @emit 'nick', match[1]
+    else if text.match /^\//
+      @emit 'error', "bad command: #{text}"
+    else
+      @emit 'input', text
+    @element.val('')
 
   focus: ->
     @element.focus()
@@ -102,7 +108,7 @@ class ChatIdentityList
     @identities[i] = to if (i = @identities.indexOf from) >= 0
 
   display: ->
-    @element.empty();
+    @element.empty()
     @element.append(@mark_up identity) for identity in @identities when identity isnt @myself
 
   mark_up: (identity) ->
@@ -117,13 +123,17 @@ $(document).ready ->
 
   chatbox = new ChatBox('#chat-box')
 
-  input = new InputBox('#chat-input')
-  input.on 'nick', (data) -> send_packet {action: 'identify', data: data.identity}
-  input.on 'input', (data) -> send_packet {action: 'say', data: data.message}
-  input.focus()
+  view = (data) ->
+    component.receive data for component in [chatbox, identity, identity_list]
 
   socket.on 'data', (data) ->
     console.log 'received', data
-    component.receive data for component in [chatbox, identity, identity_list]
+    view data
+
+  input = new InputBox('#chat-input')
+  input.on 'input', (text) -> send_packet {action: 'say', data: text}
+  input.on 'nick', (new_identity) -> send_packet {action: 'identify', data: new_identity}
+  input.on 'error', (message) -> view {action: 'error', data: message}
+  input.focus()
 
   send_packet {action: 'members'}
