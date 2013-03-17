@@ -9,9 +9,12 @@
     <script src="/lib/launch-bundle.js"></script>
     <title>Chat</title>
     <style>
+      body {
+        font-family: Verdana, Geneva, sans-serif;
+        color: #404040;
+      }
       #chat-client {
         width: 50em;
-        color: #404040;
       }
       #chat-box .notice {
         font-style: italic;
@@ -23,7 +26,8 @@
         border-color: gray;
       }
       #chat-box {
-        width: 39.9em;
+        padding: 0.25em;
+        width: 39.4em;
         height: 20em;
         overflow-y:scroll;
         vertical-align: bottom;
@@ -35,6 +39,9 @@
         float: clear;
       }
       #chat-identity {
+        padding-top: 0em;
+        padding-bottom: 0em;
+        padding-right: 0.25em;
         float: right;
       }
       #chat-box {
@@ -42,7 +49,8 @@
         float:left;
       }
       #chat-identity-list {
-        width: 9.8em;
+        padding: 0.25em;
+        width: 9.26em;
         height: 20em;
         overflow-y:auto;
         vertical-align: bottom;
@@ -52,11 +60,12 @@
         text-align: right;
       }
       #chat-input-box {
-        width: 49.9em;
+        width: 49.43em;
         float: clear;
       }
       #chat-input {
-        margin-top: 0.1em;
+        margin-top: 0.13em;
+        padding: 0.25em;
         width: 100%;
       }
     </style>
