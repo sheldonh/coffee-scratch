@@ -30,16 +30,18 @@ class Service
         delete @identities[candidate]
         callback candidate
 
-  receive: (id, data, callback) ->
+  receive: (id, data, reply, broadcast) ->
     data = {sender: @sender_identity(id), action: data.action, data: data.data}
     switch data.action
       when 'identify'
         unless @identities[data.data]?
           @identities[data.data] = id
           delete @identities[data.sender]
-          callback data
+          broadcast data
       when 'say'
-        callback data
+        broadcast data
+      when 'members'
+        reply {action: 'members', data: Object.keys @identities}
 
   sender_identity: (id) ->
     (x for x of @identities when @identities[x] is id)[0]
@@ -52,7 +54,9 @@ io.sockets.on 'connection', (socket) ->
     socket.broadcast.emit 'data', {sender: initial_identity, action: 'connect'}
 
   socket.on 'data', (data) ->
-    service.receive socket.id, data, (accepted) -> io.sockets.emit 'data', accepted
+    broadcast = (accepted) -> io.sockets.emit 'data', accepted
+    reply = (response) -> socket.emit 'data', response
+    service.receive socket.id, data, reply, broadcast
 
   socket.on 'disconnect', -> service.disconnect socket.id, (parting_identity) ->
     io.sockets.emit 'data', {sender: parting_identity, action: 'disconnect'}

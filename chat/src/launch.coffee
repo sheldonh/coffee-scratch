@@ -85,8 +85,13 @@ $(document).ready ->
     switch data.action
       when 'welcome'
         identity.accept data.data
+        send_packet {action: 'members'}
       when 'identify'
         if data.action is 'identify' and data.sender is identity.myself()
           identity.prefer data.data
+      when 'members'
+        container = $('#chat-members')
+        container.empty()
+        container.append("<div class='identity'>#{member}</div>") for member in data.data when member isnt identity.myself()
     chatbox.present data
 
