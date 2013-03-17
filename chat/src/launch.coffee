@@ -92,20 +92,24 @@ class ChatIdentityList
 
   receive: (data) ->
     switch data.action
-      when 'welcome'
-        @myself = data.data
-        @display()
+      when 'welcome' then @myself = data.data
+      when 'members' then @identities = data.data
+      when 'connect' then @add data.sender
+      when 'disconnect' then @remove data.sender
       when 'identify'
         if data.sender is @myself
           @myself = data.data
         @rename data.sender, data.data
-        @display()
-      when 'members'
-        @identities = data.data
-        @display
+      else
+        return
+    @display()
 
   rename: (from, to) ->
     @identities[i] = to if (i = @identities.indexOf from) >= 0
+
+  add: (identity) -> @identities.push identity
+
+  remove: (identity) -> @identities.splice(@identities.indexOf(identity), 1)
 
   display: ->
     @element.empty()
