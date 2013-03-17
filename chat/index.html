@@ -17,7 +17,7 @@
         font-style: italic;
         color: gray;
       }
-      #chat-box, #chat-input, #chat-members {
+      #chat-box, #chat-input, #chat-identity-list {
         border-style: solid;
         border-width: 0.1em;
         border-color: gray;
@@ -41,14 +41,14 @@
         position: relative;
         float:left;
       }
-      #chat-members {
+      #chat-identity-list {
         width: 9.8em;
         height: 20em;
         overflow-y:auto;
         vertical-align: bottom;
         float: right;
       }
-      #chat-members .identity {
+      #chat-identity-list .identity {
         text-align: right;
       }
       #chat-input-box {
@@ -66,17 +66,11 @@
     <div id='chat-client'>
       <div id='chat-titlebar'>
         <div id='chat-identity'></div>
-        <!-- I think I can de-gross this by moving identity into chat-members -->
+        <!-- I think I can de-gross this by moving identity into chat-identity-list -->
         <div id='chat-room'>&nbsp;</div>
       </div>
       <div id='chat-box'></div>
-      <div id='chat-members'>
-        <div class='identity'>Pinnie</div>
-        <div class='identity'>Floyd</div>
-        <div class='identity'>Bruce</div>
-        <div class='identity'>Connor</div>
-        <div class='identity'>Jonno</div>
-      </div>
+      <div id='chat-identity-list'></div>
       <div id='chat-input-box'>
         <input id='chat-input' name='chat-input' type='text' />
       </div>

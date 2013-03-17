@@ -69,10 +69,39 @@ class ChatIdentity extends EventEmitter
 
   myself: -> @identity
 
+class ChatIdentityList
+  constructor: (dom_id) ->
+    @element = $(dom_id)
+    @identities = []
+    @my_identity = null
+
+  list: (identities) ->
+    if identities?
+      @identities = identities
+      @display()
+    @identities
+
+  myself: (identity) ->
+    if identity?
+      console.log "setting my identity to", identity
+      @my_identity = identity
+      @display()
+    @my_identity
+
+  display: ->
+    console.log "excluding my identity", @my_identity
+    @element.empty();
+    @element.append(@mark_up identity) for identity in @identities when identity isnt @my_identity
+
+  mark_up: (identity) ->
+    "<div class='identity'>#{identity}</div>"
+
 $(document).ready ->
 
   identity = new ChatIdentity('#chat-identity')
   identity.on 'prefer', (preferred) -> send_packet {action: 'identify', data: preferred}
+
+  identity_list = new ChatIdentityList('#chat-identity-list')
 
   chatbox = new ChatBox('#chat-box')
 
@@ -85,13 +114,13 @@ $(document).ready ->
     switch data.action
       when 'welcome'
         identity.accept data.data
+        identity_list.myself data.data
         send_packet {action: 'members'}
       when 'identify'
         if data.action is 'identify' and data.sender is identity.myself()
           identity.prefer data.data
+          identity_list.myself data.data
       when 'members'
-        container = $('#chat-members')
-        container.empty()
-        container.append("<div class='identity'>#{member}</div>") for member in data.data when member isnt identity.myself()
+        identity_list.list data.data
     chatbox.present data
 
