@@ -10,20 +10,20 @@
     <title>Chat</title>
     <style>
       #chat-client {
-        width: 40em;
+        width: 50em;
         color: #404040;
       }
       #chat-box .notice {
         font-style: italic;
         color: gray;
       }
-      #chat-box, #chat-input {
+      #chat-box, #chat-input, #chat-members {
         border-style: solid;
-        border-width: thin;
+        border-width: 0.1em;
         border-color: gray;
-        width: 100%;
       }
       #chat-box {
+        width: 39.9em;
         height: 20em;
         overflow-y:scroll;
         vertical-align: bottom;
@@ -39,10 +39,25 @@
       }
       #chat-box {
         position: relative;
+        float:left;
       }
-      #chat-box span.sink {
-        position: absolute;
-        bottom: 0;
+      #chat-members {
+        width: 9.8em;
+        height: 20em;
+        overflow-y:auto;
+        vertical-align: bottom;
+        float: right;
+      }
+      #chat-members .identity {
+        text-align: right;
+      }
+      #chat-input-box {
+        width: 49.9em;
+        float: clear;
+      }
+      #chat-input {
+        margin-top: 0.1em;
+        width: 100%;
       }
     </style>
   </head>
@@ -51,10 +66,20 @@
     <div id='chat-client'>
       <div id='chat-titlebar'>
         <div id='chat-identity'></div>
+        <!-- I think I can de-gross this by moving identity into chat-members -->
         <div id='chat-room'>&nbsp;</div>
       </div>
       <div id='chat-box'></div>
-      <div><input id='chat-input' name='chat-input' type='text' /></div>
+      <div id='chat-members'>
+        <div class='identity'>Pinnie</div>
+        <div class='identity'>Floyd</div>
+        <div class='identity'>Bruce</div>
+        <div class='identity'>Connor</div>
+        <div class='identity'>Jonno</div>
+      </div>
+      <div id='chat-input-box'>
+        <input id='chat-input' name='chat-input' type='text' />
+      </div>
     </div>
   </body>
 </html>
