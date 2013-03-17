@@ -8,9 +8,8 @@ web_request_handler = (req, res) ->
       res.writeHead(200, {'Content-Type': 'text/html'})
       res.end data
     else
-      res.writeHead 500
-      console.log "error reading", url, error
-      res.end "error reading #{url}"
+      res.writeHead 404
+      res.end "Object not found: #{url}"
 
 web_server = require('http').createServer web_request_handler
 io = require('socket.io').listen web_server, {log: false}

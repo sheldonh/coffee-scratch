@@ -21,6 +21,7 @@ class ChatBox
       when 'say'
         [style, message] = ["message", "#{@mark_up 'identity', data.sender}: #{@mark_up 'message', data.data}"]
       else
+        console.log "discarding unpresentable message", data
         return
     @display style, message
 
@@ -81,12 +82,11 @@ $(document).ready ->
   input.focus()
 
   socket.on 'data', (data) ->
-    if not identity.myself()?
-      if data.action is 'welcome'
+    switch data.action
+      when 'welcome'
         identity.accept data.data
-        chatbox.present data
-    else
-      if data.action is 'identify' and data.sender is identity.myself()
-        identity.prefer data.data
-      chatbox.present data
+      when 'identify'
+        if data.action is 'identify' and data.sender is identity.myself()
+          identity.prefer data.data
+    chatbox.present data
 
