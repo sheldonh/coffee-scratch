@@ -1,4 +1,4 @@
-task 'launch', 'launch service on port 8000', -> build ->
+task 'launch', 'launch service on port 8000', -> build -> browserify ->
   node = spawn 'node', ['lib/main.js']
   console_log = (data) -> console.log data.toString().trim()
   node.stdout.on 'data', console_log
@@ -71,7 +71,7 @@ task 'build', 'compile source', -> build -> browserify -> log ":)", green
 # ```
 # cake watch
 # ```
-task 'watch', 'compile and watch', -> build true, -> log ":-)", green
+task 'watch', 'compile and watch', -> build true, -> browserify -> log ":-)", green
 
 # ## *test*
 #
