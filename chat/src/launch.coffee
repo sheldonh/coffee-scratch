@@ -128,18 +128,13 @@ class ChatIdentityList
   constructor: (dom_id) ->
     @element = $(dom_id)
     @identities = []
-    @myself = null
 
   receive: (data) ->
     switch data.action
-      when 'welcome' then @myself = data.data
       when 'members' then @identities = data.data
       when 'connect' then @add data.sender
       when 'disconnect' then @remove data.sender
-      when 'identify'
-        if data.sender is @myself
-          @myself = data.data
-        @rename data.sender, data.data
+      when 'identify' then @rename data.sender, data.data
       else
         return
     @display()
@@ -153,7 +148,7 @@ class ChatIdentityList
 
   display: ->
     @element.empty()
-    @element.append(@mark_up identity) for identity in @identities when identity isnt @myself
+    @element.append(@mark_up identity) for identity in @identities
 
   mark_up: (identity) ->
     "<div class='identity'>#{identity}</div>"

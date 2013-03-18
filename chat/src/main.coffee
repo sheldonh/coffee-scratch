@@ -41,7 +41,8 @@ class Service
       when 'say'
         broadcast data
       when 'members'
-        reply {action: 'members', data: Object.keys @identities}
+        everyone_except_sender = (Object.keys @identities).filter (x) -> x isnt data.sender
+        reply {action: 'members', data: everyone_except_sender}
 
   sender_identity: (id) ->
     (x for x of @identities when @identities[x] is id)[0]
