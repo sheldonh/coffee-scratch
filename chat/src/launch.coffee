@@ -37,10 +37,49 @@ class ChatBox
     div.effect 'highlight'
     @element.scrollTop @element[0].scrollHeight
 
+class InputHistory extends EventEmitter
+  constructor: ->
+    @history = []
+    @at_history = null
+
+  append: (input) ->
+    @history.push input
+    @at_history = null
+
+  scroll_up: ->
+    if @history.length > 0 and @at_history != 0
+      @at_history ?= @history.length
+      @at_history -= 1
+      @emit 'select', @history[@at_history]
+
+  scroll_down: ->
+    if @at_history? and @at_history < @history.length - 1
+      @at_history ?= -1
+      @at_history += 1
+      @emit 'select', @history[@at_history]
+    else
+      @cancel()
+
+  cancel: ->
+    @at_history = null
+    @emit 'select', ''
+
 class InputBox extends EventEmitter
   constructor: (dom_id) ->
     @element = $(dom_id)
-    @element.bind 'keyup', (e) => @receive() if e.which is 13
+    @element.bind 'keyup', (e) => @keypress_handler e
+    @history = new InputHistory()
+    @history.on 'select', (s) => @element.val s
+
+    # Firefox: https://bugzilla.mozilla.org/show_bug.cgi?id=614304
+    window.addEventListener 'keydown', (e) -> e.preventDefault() if e.keyCode == 27
+
+  keypress_handler: (e) ->
+    switch e.keyCode
+      when 13 then @receive()             # ENTER
+      when 38 then @history.scroll_up()   # Up arrow
+      when 40 then @history.scroll_down() # Down arrow
+      when 27 then @history.cancel()      # Esc
 
   receive: ->
     text = @element.val()
@@ -48,9 +87,11 @@ class InputBox extends EventEmitter
       @emit 'nick', match[1]
     else if text.match /^\//
       @emit 'error', "bad command: #{text}"
+      return
     else
       @emit 'input', text
-    @element.val('')
+    @history.append @element.val()
+    @element.val ''
 
   focus: ->
     @element.focus()
