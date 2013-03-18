@@ -24,7 +24,7 @@
         font-style: italic;
         color: gray;
       }
-      #chat-box, #chat-input, #chat-identity-list {
+      #chat-box, #chat-input, #chat-identity-list-container {
         border-style: solid;
         border-width: 0.1em;
         border-color: gray;
@@ -36,36 +36,35 @@
         overflow-y:scroll;
         vertical-align: bottom;
       }
-      #chat-titlebar {
-        width: 100%;
-      }
-      #chat-room {
-        float: clear;
-      }
       #chat-identity {
-        padding-top: 0em;
-        padding-bottom: 0em;
+        padding-bottom: 0.25em;
         padding-right: 0.25em;
-        float: right;
+        text-align: right;
       }
       #chat-box {
         position: relative;
         float:left;
       }
-      #chat-identity-list {
+      #chat-identity-list-container {
         padding: 0.25em;
         width: 9.26em;
         height: 20em;
-        overflow-y:auto;
+        overflow-y: auto;
+        overflow-x: hidden;
         vertical-align: bottom;
         float: right;
+      }
+      #chat-identity-list {
+        padding: 0;
+        overflow-x: hidden;
+        width: 100%;
       }
       #chat-identity-list .identity {
         text-align: right;
       }
       #chat-input-box {
         width: 49.43em;
-        float: clear;
+        clear: both;
       }
       #chat-input {
         margin-top: 0.13em;
@@ -77,13 +76,11 @@
   <body>
     <h1>Chat</h1>
     <div id='chat-client'>
-      <div id='chat-titlebar'>
-        <div id='chat-identity'></div>
-        <!-- I think I can de-gross this by moving identity into chat-identity-list -->
-        <div id='chat-room'>&nbsp;</div>
-      </div>
+      <div id='chat-identity'></div>
       <div id='chat-box'></div>
-      <div id='chat-identity-list'></div>
+      <div id='chat-identity-list-container'>
+        <div id='chat-identity-list'></div>
+      </div>
       <div id='chat-input-box'>
         <input id='chat-input' name='chat-input' type='text' />
       </div>
