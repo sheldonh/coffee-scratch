@@ -1,7 +1,5 @@
 {EventEmitter} = require 'events'
 
-socket = io.connect("http://localhost:8000")
-
 class ChatBox
   constructor: (dom_id) ->
     @element = $(dom_id)
@@ -153,6 +151,8 @@ class ChatIdentityList
   mark_up: (identity) ->
     "<div class='identity'>#{identity}</div>"
 
+socket = io.connect("http://localhost:8000")
+
 $(document).ready ->
 
   chatbox = new ChatBox('#chat-box')
@@ -167,8 +167,8 @@ $(document).ready ->
 
   send_packet = (data) -> socket.emit 'data', data
   identity.on 'prefer', (preferred) -> send_packet {action: 'identify', data: preferred}
-  input.on 'input', (text) -> send_packet {action: 'say', data: text}
   input.on 'nick', (new_identity) -> send_packet {action: 'identify', data: new_identity}
+  input.on 'input', (text) -> send_packet {action: 'say', data: text}
 
   send_packet {action: 'members'}
   input.focus()
