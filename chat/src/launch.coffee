@@ -118,17 +118,18 @@ class ChatIdentity extends EventEmitter
     @element.effect 'highlight'
 
   prefer_identity_from_cookie: ->
-    @emit 'prefer', preferred if preferred = $.cookie 'identity'
+    @emit 'preference', preferred if preferred = $.cookie 'identity'
 
   save_preferred_identity_in_cookie: -> $.cookie 'identity', @myself
 
-class ChatIdentityList
+class ChatIdentityList extends EventEmitter
   constructor: (dom_id) ->
     @element = $(dom_id)
     @identities = []
 
   receive: (data) ->
     switch data.action
+      when 'welcome' then @emit 'refresh'
       when 'members' then @identities = data.data
       when 'connect' then @add data.sender
       when 'disconnect' then @remove data.sender
@@ -151,9 +152,9 @@ class ChatIdentityList
   mark_up: (identity) ->
     "<div class='identity'>#{identity}</div>"
 
-socket = io.connect("http://localhost:8000")
-
 $(document).ready ->
+
+  socket = io.connect("http://localhost:8000")
 
   chatbox = new ChatBox('#chat-box')
   identity = new ChatIdentity('#chat-identity')
@@ -166,10 +167,10 @@ $(document).ready ->
   input.on 'error', (message) -> view {action: 'error', data: message}
 
   send_packet = (data) -> socket.emit 'data', data
-  identity.on 'prefer', (preferred) -> send_packet {action: 'identify', data: preferred}
+  identity_list.on 'refresh', -> send_packet {action: 'members'}
+  identity.on 'preference', (preferred) -> send_packet {action: 'identify', data: preferred}
   input.on 'nick', (new_identity) -> send_packet {action: 'identify', data: new_identity}
   input.on 'input', (text) -> send_packet {action: 'say', data: text}
 
-  send_packet {action: 'members'}
   input.focus()
 

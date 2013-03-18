@@ -34,7 +34,13 @@ class Service
     data = {sender: @sender_identity(id), action: data.action, data: data.data}
     switch data.action
       when 'identify'
-        unless @identities[data.data]?
+        if data.data.match /^guest\d+/i
+          reply {action: 'error', data: "Please don't identify as a guest."}
+        else if data.data is @sender_identity(id)
+          reply {action: 'error', data: "You are already #{data.data}."}
+        else if @identities[data.data]?
+          reply {action: 'error', data: "The identity #{data.data} is already in use."}
+        else
           @identities[data.data] = id
           delete @identities[data.sender]
           broadcast data
