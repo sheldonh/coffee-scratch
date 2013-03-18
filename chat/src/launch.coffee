@@ -109,7 +109,7 @@ class ChatIdentity extends EventEmitter
       when 'identify'
         if data.sender is @myself
           @change data.data
-          @save_preferred_identity_in_cookie
+          @save_preferred_identity_in_cookie()
 
   change: (identity) ->
     @myself = identity
