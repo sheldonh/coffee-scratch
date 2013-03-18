@@ -1,7 +1,6 @@
 {EventEmitter} = require 'events'
 
 socket = io.connect("http://localhost:8000")
-send_packet = (data) -> socket.emit 'data', data
 
 class ChatBox
   constructor: (dom_id) ->
@@ -161,24 +160,21 @@ class ChatIdentityList
 
 $(document).ready ->
 
-  identity_list = new ChatIdentityList('#chat-identity-list')
-
-  identity = new ChatIdentity('#chat-identity')
-  identity.on 'prefer', (preferred) -> send_packet {action: 'identify', data: preferred}
-
   chatbox = new ChatBox('#chat-box')
+  identity = new ChatIdentity('#chat-identity')
+  identity_list = new ChatIdentityList('#chat-identity-list')
+  input = new InputBox('#chat-input')
 
   view = (data) ->
     component.receive data for component in [chatbox, identity, identity_list]
+  socket.on 'data', (data) -> view data
+  input.on 'error', (message) -> view {action: 'error', data: message}
 
-  socket.on 'data', (data) ->
-    console.log 'received', data
-    view data
-
-  input = new InputBox('#chat-input')
+  send_packet = (data) -> socket.emit 'data', data
+  identity.on 'prefer', (preferred) -> send_packet {action: 'identify', data: preferred}
   input.on 'input', (text) -> send_packet {action: 'say', data: text}
   input.on 'nick', (new_identity) -> send_packet {action: 'identify', data: new_identity}
-  input.on 'error', (message) -> view {action: 'error', data: message}
-  input.focus()
 
   send_packet {action: 'members'}
+  input.focus()
+
