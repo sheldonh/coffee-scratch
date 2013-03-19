@@ -1,7 +1,8 @@
 {
   "dependencies": {
-    "carrier": "~0.1.10",
-    "socket.io": "~0.9.13",
-    "browserify": "~2.6.0"
+    "socket.io": "~0.9.13"
+  },
+  "devDependencies": {
+    "glob": "~3.1.21"
   }
 }

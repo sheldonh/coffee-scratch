@@ -2,8 +2,8 @@ fs = require 'fs'
 
 web_request_handler = (req, res) ->
   url = if req.url is '/' then '/index.html' else req.url
-  # Directory traversal vulnerability
-  fs.readFile "#{__dirname}/../#{url}", (error, data) ->
+  # Directory traversal vulnerability. Is rejecting '..' enough?
+  fs.readFile "#{__dirname}/../web#{url}", (error, data) ->
     if not error
       res.writeHead(200, {'Content-Type': 'text/html'})
       res.end data
@@ -12,7 +12,7 @@ web_request_handler = (req, res) ->
       res.end "Object not found: #{url}"
 
 web_server = require('http').createServer web_request_handler
-io = require('socket.io').listen web_server, {log: false}
+io = require('socket.io').listen web_server
 
 class Service
   constructor: ->
