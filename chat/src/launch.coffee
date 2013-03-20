@@ -1,4 +1,7 @@
+# Currently relies on the browser to load jquery and jquery-ui (effects.highlight)
+
 {EventEmitter} = require 'events'
+store = require 'store'
 
 class ChatBox
   constructor: (dom_id) ->
@@ -103,11 +106,11 @@ class ChatIdentity extends EventEmitter
     switch data.action
       when 'welcome'
         @change data.data
-        @prefer_identity_from_cookie()
+        @prefer_identity_from_store()
       when 'identify'
         if data.sender is @myself
           @change data.data
-          @save_preferred_identity_in_cookie()
+          @save_preferred_identity_to_store()
 
   change: (identity) ->
     @myself = identity
@@ -117,10 +120,10 @@ class ChatIdentity extends EventEmitter
     @element.html(@myself)
     @element.effect 'highlight'
 
-  prefer_identity_from_cookie: ->
-    @emit 'preference', preferred if preferred = $.cookie 'identity'
+  prefer_identity_from_store: ->
+    @emit 'preference', preferred if preferred = store.get 'identity'
 
-  save_preferred_identity_in_cookie: -> $.cookie 'identity', @myself
+  save_preferred_identity_to_store: -> store.set 'identity', @myself
 
 class ChatIdentityList extends EventEmitter
   constructor: (dom_id) ->
