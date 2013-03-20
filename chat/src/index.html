@@ -2,10 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="vendor/jquery-1.9.1.min.js"></script>
-    <script src="vendor/jquery-ui-1.10.2.custom.min.js"></script>
-    <script src="bundle.js"></script>
+    <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+    <script type="text/javascript" src="vendor/jquery-1.9.1.min.js"></script>
+    <script type="text/javascript" src="vendor/jquery-ui-1.10.2.custom.min.js"></script>
+    <script type="text/javascript" src="vendor/knockout-2.2.1.js"></script>
+    <script type="text/javascript" src="bundle.js"></script>
     <title>Chat</title>
     <style>
       body {
@@ -74,13 +75,38 @@
   <body>
     <h1>Chat</h1>
     <div id='chat-client'>
-      <div id='chat-identity'></div>
-      <div id='chat-box'></div>
+      <div id='chat-identity' data-bind='text: identity'></div>
+      <div id='chat-box' data-bind='foreach: {data: messages, afterAdd: highlightEffect}'>
+        <div class='notice' data-bind='if: action == "welcome"'>
+          You have connected as <span class='identity' data-bind='text: data'></span>.
+          Use the /nick command to rename.
+        </div>
+
+        <div class='notice' data-bind='if: action == "connect"'>
+          <span class='identity' data-bind='text: sender'></span> has connected.
+        </div>
+
+        <div class='notice' data-bind='if: action == "disconnect"'>
+          <span class='identity' data-bind='text: sender'></span> has disconnected.
+        </div>
+
+        <div class='notice' data-bind='if: action == "identify"'>
+          <span class='identity' data-bind='text: sender'></span> now identifies as <span class='identity' data-bind='text: data'></span>.
+        </div>
+
+        <div class='message' data-bind='if: action == "say"'>
+          <span class='identity' data-bind='text: sender'></span>: <span class='text' data-bind='text: data'></span>
+        </div>
+
+        <div class='error' data-bind='text: data, if: action == "error"'></div>
+      </div>
       <div id='chat-identity-list-container'>
-        <div id='chat-identity-list'></div>
+        <div id='chat-identity-list' data-bind='foreach: members'>
+          <div class='identity' data-bind='text: $data'></div>
+        </div>
       </div>
       <div id='chat-input-box'>
-        <input id='chat-input' name='chat-input' type='text' />
+        <input id='chat-input' type='text' data-bind='event: {keyup: inputHistoryKeys}, value: input, hasfocus: isInputSelected' />
       </div>
     </div>
   </body>

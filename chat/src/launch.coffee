@@ -1,41 +1,18 @@
-# Currently relies on the browser to load jquery and jquery-ui (effects.highlight)
+# Requires that the HTML document include these libraries:
+#
+#   Requires: jquery, knockout
+#   Optional: jquery-ui (w/ highlight effect)
 
 {EventEmitter} = require 'events'
 store = require 'store'
 
 class ChatBox
-  constructor: (dom_id) ->
-    @element = $(dom_id)
-    @escaper = $('<div>')
+  constructor: (@vm, @scrollback = 1000) ->
 
   receive: (data) ->
-    switch data.action
-      when 'welcome'
-        [style, message] = ["notice", "You have connected as #{@mark_up 'identity', data.data}. Use the /nick command to rename."]
-      when 'connect'
-        [style, message] = ["notice", "#{@mark_up 'identity', data.sender} has connected"]
-      when 'disconnect'
-        [style, message] = ["notice", "#{@mark_up 'identity', data.sender} has disconnected"]
-      when 'identify'
-        [style, message] = ["notice", "#{@mark_up 'identity', data.sender} now identifies as #{@mark_up 'identity', data.data}"]
-      when 'say'
-        [style, message] = ["message", "#{@mark_up 'identity', data.sender}: #{@mark_up 'message', data.data}"]
-      when 'error'
-        [style, message] = ["error", data.data]
-      else
-        console.log "discarding unpresentable message", data
-        return
-    @display style, message
-
-  mark_up: (css, value) -> "<span class='#{css}'>#{@escape value}</span>"
-
-  escape: (unsafe) -> @escaper.text(unsafe).html()
-
-  display: (style, message) ->
-    div = $("<div class='#{style}'>#{message}</div>")
-    @element.append div
-    div.effect 'highlight'
-    @element.scrollTop @element[0].scrollHeight
+    if ['welcome', 'connect', 'disconnect', 'identify', 'say', 'error'].indexOf(data.action) >= 0
+      @vm.messages.shift() if @vm.messages().length >= @scrollback
+      @vm.messages.push ko.observable data
 
 class InputHistory extends EventEmitter
   constructor: ->
@@ -64,105 +41,85 @@ class InputHistory extends EventEmitter
     @at_history = null
     @emit 'select', ''
 
+# I think it might work quite nicely to split this into InputEditor (keypress_handler)
+# and InputProcesser (receive).
 class InputBox extends EventEmitter
-  constructor: (dom_id) ->
-    @element = $(dom_id)
-    @element.bind 'keyup', (e) => @keypress_handler e
+  constructor: (@vm) ->
+    # Meh. Only doing this so VM dependencies all point in one (possibly wrong) direction.
+    @vm.registeredInputHistoryKeysHandler = (data, event) => @keypress_handler data, event
     @history = new InputHistory()
-    @history.on 'select', (s) => @element.val s
+    @history.on 'select', (s) => vm.input s
 
-    # Firefox: https://bugzilla.mozilla.org/show_bug.cgi?id=614304
-    window.addEventListener 'keydown', (e) -> e.preventDefault() if e.keyCode == 27
-
-  keypress_handler: (e) ->
-    switch e.keyCode
+  keypress_handler: (data, event) =>
+    switch event.keyCode
       when 13 then @receive()             # ENTER
       when 38 then @history.scroll_up()   # Up arrow
       when 40 then @history.scroll_down() # Down arrow
       when 27 then @history.cancel()      # Esc
 
-  receive: ->
-    text = @element.val()
+  receive: =>
+    text = @vm.input().trim()
     if match = text.match /^\/nick\s+(.+)/
       @emit 'nick', match[1]
     else if text.match /^\//
       @emit 'error', "bad command: #{text}"
       return
-    else
+    else if text.length > 0
       @emit 'input', text
-    @history.append @element.val()
-    @element.val ''
-
-  focus: ->
-    @element.focus()
-    @
+    @history.append text
+    @vm.input ''
 
 class ChatIdentity extends EventEmitter
-  constructor: (dom_id) ->
-    @element = $(dom_id)
-    @myself = null
+  constructor: (@vm) ->
 
   receive: (data) ->
-    switch data.action
+    {sender, action, data: identity} = data
+    switch action
       when 'welcome'
-        @change data.data
-        @prefer_identity_from_store()
+        @vm.identity identity
+        @emit 'preference', preferred if preferred = store.get 'identity'
       when 'identify'
-        if data.sender is @myself
-          @change data.data
-          @save_preferred_identity_to_store()
-
-  change: (identity) ->
-    @myself = identity
-    @display()
-
-  display: ->
-    @element.html(@myself)
-    @element.effect 'highlight'
-
-  prefer_identity_from_store: ->
-    @emit 'preference', preferred if preferred = store.get 'identity'
-
-  save_preferred_identity_to_store: -> store.set 'identity', @myself
+        if sender is @vm.identity()
+          @vm.identity identity
+          store.set 'identity', @vm.identity()
 
 class ChatIdentityList extends EventEmitter
-  constructor: (dom_id) ->
-    @element = $(dom_id)
-    @identities = []
+  constructor: (@vm) ->
 
   receive: (data) ->
     switch data.action
       when 'welcome' then @emit 'refresh'
-      when 'members' then @identities = data.data
-      when 'connect' then @add data.sender
-      when 'disconnect' then @remove data.sender
-      when 'identify' then @rename data.sender, data.data
-      else
-        return
-    @display()
-
-  rename: (from, to) ->
-    @identities[i] = to if (i = @identities.indexOf from) >= 0
-
-  add: (identity) -> @identities.push identity
-
-  remove: (identity) -> @identities.splice(@identities.indexOf(identity), 1)
-
-  display: ->
-    @element.empty()
-    @element.append(@mark_up identity) for identity in @identities
-
-  mark_up: (identity) ->
-    "<div class='identity'>#{identity}</div>"
+      when 'members' then @vm.members data.data
+      when 'connect' then @vm.members.push identity
+      when 'disconnect' then @vm.members.remove identity
+      when 'identify'
+        if (i = @vm.members.indexOf data.sender) >= 0
+          @vm.members.splice i, 1, data.data
 
 $(document).ready ->
 
+  # Firefox: https://bugzilla.mozilla.org/show_bug.cgi?id=614304
+  window.addEventListener 'keydown', (e) -> e.preventDefault() if e.keyCode == 27
+
   socket = io.connect("http://localhost:8000")
 
-  chatbox = new ChatBox('#chat-box')
-  identity = new ChatIdentity('#chat-identity')
-  identity_list = new ChatIdentityList('#chat-identity-list')
-  input = new InputBox('#chat-input')
+  viewModel =
+    identity: ko.observable()
+    members: ko.observableArray()
+    messages: ko.observableArray()
+    input: ko.observable()
+    isInputSelected: ko.observable(true)
+    inputHistoryKeys: (data, event) -> @registeredInputHistoryKeysHandler(data, event)
+    registeredInputHistoryKeysHandler: (data, event) ->
+      console.log "input box is supposed to register a key handler"; true
+    highlightEffect: (element, index, data) -> try $(element).effect 'highlight'
+
+  ko.applyBindings viewModel
+
+  chatbox = new ChatBox(viewModel)
+  identity = new ChatIdentity(viewModel)
+  identity_list = new ChatIdentityList(viewModel)
+  input = new InputBox(viewModel)
 
   view = (data) ->
     component.receive data for component in [chatbox, identity, identity_list]
@@ -174,6 +131,4 @@ $(document).ready ->
   identity.on 'preference', (preferred) -> send_packet {action: 'identify', data: preferred}
   input.on 'nick', (new_identity) -> send_packet {action: 'identify', data: new_identity}
   input.on 'input', (text) -> send_packet {action: 'say', data: text}
-
-  input.focus()
 
