@@ -10,7 +10,8 @@ task 'launch:watch', 'Build, launch and kill for all changes', ->
 
 server_process = null
 launch = ->
-  run 'node', 'server/main.js', (child) -> server_process = child
+  record_server_process = (child) -> server_process = child
+  run 'node', 'server/main.js', record_server_process, -> console.log 'server stopped'
 
 build = (callback) -> prepare_dir 'build', -> coffee -> webify -> server callback
 
@@ -24,7 +25,9 @@ watch = (callback) ->
             callback()
 
 kill = (callback) ->
-  server_process?.on 'close', -> server_process = null; callback()
+  server_process?.on 'close', ->
+    console.log 'server killed'
+    server_process = null; callback()
   server_process?.kill('SIGINT')
 
 webify = (callback) -> prepare_dir 'web', -> vendor -> browserify -> index callback
@@ -53,14 +56,14 @@ on_success = (fn, args..., callback) ->
   fn args..., (err, result...) ->
     if err? then throw err else callback result...
 
-run = (cmd, args..., callback) ->
-  throw "run demands a callback" unless typeof callback is 'function'
+run = (cmd, args..., on_exit) ->
+  throw "run demands a callback" unless typeof on_exit is 'function'
   args = [].concat args...
+  on_spawn = args.pop() if typeof args[args.length - 1] is 'function'
   on_success which, cmd, (path) ->
     console.log path, args...
-    child = system path, args, callback
-    # Yuk
-    if cmd is 'node' then server_process = child
+    child = system path, args, on_exit
+    on_spawn? child
 
 system = (path, args, callback) ->
   log = (log_how, data) -> log_how data.toString().trim()
