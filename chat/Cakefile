@@ -1,10 +1,29 @@
-task 'launch', 'Launch the server thing', -> launch smile
-
 task 'build', 'Build all the things', -> build smile
 
-launch = (callback) -> build -> run 'node', 'server/main.js', callback
+task 'launch', 'Launch the server thing', -> build -> launch smile
+
+task 'watch', 'Build all the changes forever', -> watch -> build smile
+
+task 'launch:watch', 'Launch the server thing and then watch', ->
+  watch -> build smile
+  build -> launch smile
+
+launch = (callback) -> run 'node', 'server/main.js', callback
 
 build = (callback) -> prepare_dir 'build', -> coffee -> webify -> server callback
+
+watch = (callback) ->
+  console.log 'watching src/ ...'
+  last = new Date()
+  createMonitor 'src', (monitor) ->
+    for event in ['created', 'removed', 'changed']
+      monitor.on event, (fn, stat) ->
+        if stat.mtime > last
+          if fn.match /\.(?:js|coffee|html)$/
+            last = stat.mtime
+            callback()
+          else
+            console.log fn, event, "but did not match filter"
 
 webify = (callback) -> prepare_dir 'web', -> vendor -> browserify -> index callback
 
@@ -26,15 +45,11 @@ vendor = (callback) ->
 browserify = (callback) ->
   run 'browserify', '-o', 'web/bundle.js', 'build/launch.js', callback
 
-index = (callback) ->
-  run 'cp', 'index.html', 'web/', callback
+index = (callback) -> run 'cp', 'src/index.html', 'web/', callback
 
 on_success = (fn, args..., callback) ->
   fn args..., (err, result...) ->
-    if err?
-      throw err
-    else
-      callback result...
+    if err? then throw err else callback result...
 
 run = (cmd, args..., callback) ->
   throw "run demands a callback" unless typeof callback is 'function'
@@ -49,9 +64,12 @@ system = (path, args, callback) ->
   child.stderr.pipe(process.stderr)
   child.on 'exit', (status) -> callback?() if status is 0
 
-smile = -> console.log ':-)'
+smile = ->
+  console.log ':-)'
+  true
 
 fs = require 'fs'
 glob = require 'glob'
 {spawn} = require 'child_process'
+{createMonitor} = require 'watch'
 which = require 'which'
