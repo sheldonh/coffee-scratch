@@ -38,7 +38,7 @@ coffee = (callback) ->
     run 'coffee', '-c', '-o', 'build', files, callback if files.length > 0
 
 vendor = (callback) ->
-  prepare_dir 'web/vendor', -> 
+  prepare_dir 'web/vendor', ->
     on_success glob, 'vendor/*.js', (files) ->
       run 'cp', files, 'web/vendor/', callback
 
