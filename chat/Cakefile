@@ -1,29 +1,31 @@
 task 'build', 'Build all the things', -> build smile
 
-task 'launch', 'Launch the server thing', -> build -> launch smile
+task 'launch', 'Launch the server thing', -> build -> launch()
 
 task 'watch', 'Build all the changes forever', -> watch -> build smile
 
-task 'launch:watch', 'Launch the server thing and then watch', ->
-  watch -> build smile
-  build -> launch smile
+task 'launch:watch', 'Build, launch and kill for all changes', ->
+  build -> launch()
+  watch -> build -> kill -> launch()
 
-launch = (callback) -> run 'node', 'server/main.js', callback
+server_process = null
+launch = ->
+  run 'node', 'server/main.js', (child) -> server_process = child
 
 build = (callback) -> prepare_dir 'build', -> coffee -> webify -> server callback
 
 watch = (callback) ->
-  console.log 'watching src/ ...'
   last = new Date()
   createMonitor 'src', (monitor) ->
     for event in ['created', 'removed', 'changed']
       monitor.on event, (fn, stat) ->
-        if stat.mtime > last
-          if fn.match /\.(?:js|coffee|html)$/
+        if stat.mtime > last and !!fn.match /\.(?:js|coffee|html)$/
             last = stat.mtime
             callback()
-          else
-            console.log fn, event, "but did not match filter"
+
+kill = (callback) ->
+  server_process?.on 'close', -> server_process = null; callback()
+  server_process?.kill('SIGINT')
 
 webify = (callback) -> prepare_dir 'web', -> vendor -> browserify -> index callback
 
@@ -56,13 +58,17 @@ run = (cmd, args..., callback) ->
   args = [].concat args...
   on_success which, cmd, (path) ->
     console.log path, args...
-    system path, args, callback
+    child = system path, args, callback
+    # Yuk
+    if cmd is 'node' then server_process = child
 
 system = (path, args, callback) ->
+  log = (log_how, data) -> log_how data.toString().trim()
   child = spawn path, args
-  child.stdout.pipe(process.stdout)
-  child.stderr.pipe(process.stderr)
+  child.stdout.on 'data', (data) -> log console.log, data
+  child.stderr.on 'data', (data) -> log console.error, data
   child.on 'exit', (status) -> callback?() if status is 0
+  child
 
 smile = ->
   console.log ':-)'
