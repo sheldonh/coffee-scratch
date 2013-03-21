@@ -106,7 +106,9 @@
         </div>
       </div>
       <div id='chat-input-box'>
-        <input id='chat-input' type='text' data-bind='event: {keyup: inputHistoryKeys}, value: input, hasfocus: isInputSelected' />
+        <form data-bind='submit: receiveInput, event: {keyup: inputKeyUp}'>
+          <input id='chat-input' type='text' data-bind='value: input, hasfocus: isInputSelected' />
+        </form>
       </div>
     </div>
   </body>
