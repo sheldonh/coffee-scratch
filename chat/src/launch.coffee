@@ -6,6 +6,10 @@
 {EventEmitter} = require 'events'
 store = require 'store'
 
+class ViewModel extends EventEmitter
+  constructor: (properties) ->
+    @[p] = properties[p] for p of properties
+
 $(document).ready ->
 
   # Firefox: https://bugzilla.mozilla.org/show_bug.cgi?id=614304
@@ -14,7 +18,7 @@ $(document).ready ->
   socket = io.connect("http://localhost:8000")
   send_packet = (data) -> socket.emit 'data', data
 
-  viewModel =
+  viewModelDefinition =
     identity: ko.observable()
     members: ko.observableArray()
     messages: ko.observableArray()
@@ -23,13 +27,8 @@ $(document).ready ->
     isInputSelected: ko.observable(true)
     receiveInput: ->
       text = @input().trim()
-      if match = text.match /^\/nick\s+(.+)/
-        send_packet {action: 'identify', data: match[1]}
-      else if text.match /^\//
-        @messages.push ko.observable {action: 'error', data: "bad command: #{text}"}
-      else if text.length > 0
-        send_packet {action: 'say', data: text}
-      @inputHistory.push @input()
+      @emit 'input', text
+      @inputHistory.push text
       @escapeInputHistory()
     inputHistory: []
     inputHistoryIndex: 1
@@ -47,7 +46,16 @@ $(document).ready ->
     escapeInputHistory: ->
       @inputHistoryIndex = @inputHistory.length
       @input ''
+  viewModel = new ViewModel viewModelDefinition
   ko.applyBindings viewModel
+
+  viewModel.on 'input', (text) ->
+    if match = text.match /^\/nick\s+(.+)/
+      send_packet {action: 'identify', data: match[1]}
+    else if text.match /^\//
+      viewModel.messages.push {action: 'error', data: "Bad command: #{text}"}
+    else if text.length > 0
+      send_packet {action: 'say', data: text}
 
   socket.on 'data', (data) ->
     # identity widget
@@ -63,7 +71,7 @@ $(document).ready ->
     # chatbox widget
     if ['welcome', 'connect', 'disconnect', 'identify', 'say', 'error'].indexOf(data.action) >= 0
       viewModel.messages.shift() if viewModel.messages().length >= 1000
-      viewModel.messages.push data
+      viewModel.messages.push {sender: data.sender, action: data.action, data: data.data}
 
     # identity list widget
     switch data.action
