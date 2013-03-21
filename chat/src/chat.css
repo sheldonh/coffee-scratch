@@ -51,11 +51,13 @@ body {
   text-align: right;
 }
 #chat-input-box {
-  width: 49.43em;
+  width: 49.35em;
   clear: both;
 }
 #chat-input {
   margin-top: 0.13em;
   padding: 0.25em;
   width: 100%;
+  font-family: inherit;
+  font-size: inherit;
 }
