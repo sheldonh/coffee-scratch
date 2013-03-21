@@ -50,7 +50,7 @@ class Service
           reply {action: 'error', data: "Please don't identify as a guest."}
         else if data.data is @sender_identity(id)
           reply {action: 'error', data: "You are already #{data.data}."}
-        else if @identities[data.data]?
+        else if @have_identity data.data
           reply {action: 'error', data: "The identity #{data.data} is already in use."}
         else
           @identities[data.data] = id
@@ -61,6 +61,9 @@ class Service
       when 'members'
         everyone_except_sender = (Object.keys @identities).filter (x) -> x isnt data.sender
         reply {action: 'members', data: everyone_except_sender}
+
+  have_identity: (id) ->
+    Object.keys(@identities).some (taken) -> id.toLowerCase() is taken.toLowerCase()
 
   sender_identity: (id) ->
     (x for x of @identities when @identities[x] is id)[0]
