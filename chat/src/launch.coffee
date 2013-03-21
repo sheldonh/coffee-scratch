@@ -25,29 +25,39 @@ $(document).ready ->
     highlightEffect: (element, index, data) -> try $(element).effect 'highlight'
     input: ko.observable()
     isInputSelected: ko.observable(true)
-    receiveInput: ->
-      text = @input().trim()
-      @emit 'input', text
-      @inputHistory.push text
-      @escapeInputHistory()
-    inputHistory: []
-    inputHistoryIndex: 1
+    receiveInput: -> @emit 'input', @input().trim(); false
     inputKeyUp: (data, event) ->
       switch event.keyCode
-        when 27 # Esc
-          @escapeInputHistory()
-        when 38 # Up arrow
-          @input @inputHistory[--@inputHistoryIndex] unless @inputHistoryIndex is 0
-        when 40 # Down arrow
-          if @inputHistoryIndex is @inputHistory.length - 1
-            @escapeInputHistory()
-          else
-            @input @inputHistory[++@inputHistoryIndex] unless @inputHistoryIndex is @inputHistory.length
-    escapeInputHistory: ->
-      @inputHistoryIndex = @inputHistory.length
-      @input ''
+        when 27 then @emit 'key:esc'
+        when 38 then @emit 'key:uparrow'
+        when 40 then @emit 'key:downarrow'
   viewModel = new ViewModel viewModelDefinition
   ko.applyBindings viewModel
+
+  inputHistory =
+    elements: ko.observableArray()
+    idx: ko.observable(1)
+    push: (text) ->
+      @elements.push text
+      @escape()
+    up: ->
+      @idx @idx() - 1 unless @idx() is 0
+    down: ->
+      if @idx() is @elements().length - 1
+        @escape()
+      else
+        @idx @idx() + 1 unless @idx() is @elements().length
+    escape: ->
+      @idx @elements().length
+  inputHistory.selected = ko.computed ->
+    if inputHistory.idx() < inputHistory.elements().length
+      inputHistory.elements()[inputHistory.idx()]
+
+  viewModel.on 'input', (text) -> inputHistory.push text
+  viewModel.on 'key:esc', -> inputHistory.escape()
+  viewModel.on 'key:uparrow', -> inputHistory.up()
+  viewModel.on 'key:downarrow', -> inputHistory.down()
+  inputHistory.selected.subscribe (text) -> viewModel.input text
 
   viewModel.on 'input', (text) ->
     if match = text.match /^\/nick\s+(.+)/
