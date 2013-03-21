@@ -1,6 +1,14 @@
 fs = require 'fs'
 path = require 'path'
 
+content_type = (url) ->
+  if matched = url.match /\.(\w+)$/
+    switch matched[1]
+      when 'css' then 'text/css'
+      when 'html' then 'text/html'
+      when 'js' then 'text/javascript'
+      else 'text/plain'
+
 web_request_handler = (req, res) ->
   url = if req.url is '/' then '/index.html' else req.url
   source = path.join('web', url)
@@ -8,7 +16,7 @@ web_request_handler = (req, res) ->
     fs.readFile source, (error, data) ->
       reply = (code, headers, body) -> res.writeHead code, headers; res.end body
       if not error
-        reply 200, {'Content-Type': 'text/html'}, data
+        reply 200, {'Content-Type': content_type url}, data
       else
         reply 404, {'Content-Type': 'text/plain'}, "Object not found: #{url}\n"
   else

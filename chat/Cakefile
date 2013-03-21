@@ -50,7 +50,9 @@ vendor = (callback) ->
 browserify = (callback) ->
   run 'browserify', '-o', 'web/bundle.js', 'build/launch.js', callback
 
-index = (callback) -> run 'cp', 'src/index.html', 'web/', callback
+index = (callback) ->
+  on_success glob, 'src/*.{css,html}', (files) ->
+    run 'cp', files, 'web/', callback
 
 on_success = (fn, args..., callback) ->
   fn args..., (err, result...) ->
