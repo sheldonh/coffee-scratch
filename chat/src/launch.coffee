@@ -41,9 +41,8 @@ $(document).ready ->
         @idx @idx() + 1 unless @idx() is @elements().length
     escape: ->
       @idx @elements().length
-  inputHistory.selected = ko.computed ->
-    if inputHistory.idx() < inputHistory.elements().length
-      inputHistory.elements()[inputHistory.idx()]
+    selected: -> @elements()[@idx()] if @idx() < @elements().length
+  inputHistory.selectEvents = ko.computed -> inputHistory.selected()
 
   viewModel.inputEvents.subscribe (text) -> inputHistory.push text
   viewModel.keyUpEvents.subscribe (keyCode) ->
@@ -51,7 +50,7 @@ $(document).ready ->
       when 27 then inputHistory.escape()
       when 38 then inputHistory.up()
       when 40 then inputHistory.down()
-  inputHistory.selected.subscribe (text) -> viewModel.input text
+  inputHistory.selectEvents.subscribe (text) -> viewModel.input text
 
   viewModel.inputEvents.subscribe (text) ->
     if match = text.match /^\/nick\s+(.+)/
