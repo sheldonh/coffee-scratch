@@ -3,12 +3,7 @@
 #   Requires: jquery, knockout
 #   Optional: jquery-ui (w/ highlight effect)
 
-{EventEmitter} = require 'events'
 store = require 'store'
-
-class ViewModel extends EventEmitter
-  constructor: (properties) ->
-    @[p] = properties[p] for p of properties
 
 $(document).ready ->
 
@@ -18,20 +13,17 @@ $(document).ready ->
   socket = io.connect("http://localhost:8000")
   send_packet = (data) -> socket.emit 'data', data
 
-  viewModelDefinition =
+  viewModel =
     identity: ko.observable()
     members: ko.observableArray()
     messages: ko.observableArray()
     highlightEffect: (element, index, data) -> try $(element).effect 'highlight'
     input: ko.observable()
     isInputSelected: ko.observable(true)
-    receiveInput: -> @emit 'input', @input().trim(); false
-    inputKeyUp: (data, event) ->
-      switch event.keyCode
-        when 27 then @emit 'key:esc'
-        when 38 then @emit 'key:uparrow'
-        when 40 then @emit 'key:downarrow'
-  viewModel = new ViewModel viewModelDefinition
+    inputEvents: ko.observable()
+    receiveInput: -> @input()? and @inputEvents @input().trim(); false
+    keyUpEvents: ko.observable()
+    inputKeyUp: (data, event) -> @keyUpEvents event.keyCode; @keyUpEvents null
   ko.applyBindings viewModel
 
   inputHistory =
@@ -53,13 +45,15 @@ $(document).ready ->
     if inputHistory.idx() < inputHistory.elements().length
       inputHistory.elements()[inputHistory.idx()]
 
-  viewModel.on 'input', (text) -> inputHistory.push text
-  viewModel.on 'key:esc', -> inputHistory.escape()
-  viewModel.on 'key:uparrow', -> inputHistory.up()
-  viewModel.on 'key:downarrow', -> inputHistory.down()
+  viewModel.inputEvents.subscribe (text) -> inputHistory.push text
+  viewModel.keyUpEvents.subscribe (keyCode) ->
+    switch keyCode
+      when 27 then inputHistory.escape()
+      when 38 then inputHistory.up()
+      when 40 then inputHistory.down()
   inputHistory.selected.subscribe (text) -> viewModel.input text
 
-  viewModel.on 'input', (text) ->
+  viewModel.inputEvents.subscribe (text) ->
     if match = text.match /^\/nick\s+(.+)/
       send_packet {action: 'identify', data: match[1]}
     else if text.match /^\//
