@@ -1,11 +1,11 @@
 # Requires that the HTML document include these libraries:
 #
-#   Requires: jquery, knockout
-#   Optional: jquery-ui (w/ highlight effect)
+#   Requires: knockout
+#   Optional: jquery + jquery-ui (for highlight effect)
 
 store = require 'store'
 
-$(document).ready ->
+document.addEventListener 'DOMContentLoaded', ->
 
   # Firefox: https://bugzilla.mozilla.org/show_bug.cgi?id=614304
   window.addEventListener 'keydown', (e) -> e.preventDefault() if e.keyCode == 27
@@ -19,11 +19,9 @@ $(document).ready ->
     messages: ko.observableArray()
     highlightEffect: (element, index, data) -> try $(element).effect 'highlight'
     input: ko.observable()
-    isInputSelected: ko.observable(true)
-    inputSubmittedEvents: ko.observable()
-    inputSubmitted: -> @input()? and @inputSubmittedEvents @input().trim(); false
-    inputKeyUpEvents: ko.observable()
-    inputKeyUp: (data, event) -> @inputKeyUpEvents event.keyCode; @inputKeyUpEvents null
+    isInputBoxSelected: ko.observable(true)
+    inputSubmitted: (form) -> ko.postbox.publish 'viewModel.inputSubmitted', text if text = @input()?.trim()
+    inputKeyUp: (data, event) -> ko.postbox.publish 'viewModel.inputKeyUp', event.keyCode
   ko.applyBindings viewModel
 
   userInputProtocol = ->
@@ -36,28 +34,28 @@ $(document).ready ->
       up: -> @idx @idx() - 1 unless @idx() is 0
       down: -> @idx @idx() + 1 unless @idx() is @elements().length
       escape: -> @idx @elements().length
-      selected: -> if @idx() < @elements().length then @elements()[@idx()] else ''
-    inputHistory.selectEvents = ko.computed -> inputHistory.selected()
+      currentSelection: -> if @idx() < @elements().length then @elements()[@idx()] else ''
+    inputHistory.selected = ko.computed -> inputHistory.currentSelection()
 
-    viewModel.inputSubmittedEvents.subscribe (text) -> inputHistory.push text
-    viewModel.inputKeyUpEvents.subscribe (keyCode) ->
+    inputHistory.selected.subscribe (text) -> viewModel.input text
+    ko.postbox.subscribe 'viewModel.inputSubmitted', (text) -> inputHistory.push text
+    ko.postbox.subscribe 'viewModel.inputKeyUp', (keyCode) ->
       switch keyCode
         when 27 then inputHistory.escape()
         when 38 then inputHistory.up()
         when 40 then inputHistory.down()
-    inputHistory.selectEvents.subscribe (text) -> viewModel.input text
 
-    # The inputSubmittedEvents subscription annoys me. It straddles user input
+    # This inputSubmitted subscription annoys me. It straddles user input
     # protocol and server messaging protocol. I think the sendPacket() calls
     # need to move out into serverMessagingProtocol(), and occur in response
     # to events triggered here.
 
-    viewModel.inputSubmittedEvents.subscribe (text) ->
+    ko.postbox.subscribe 'viewModel.inputSubmitted', (text) ->
       if match = text.match /^\/nick\s+(.+)/
         sendPacket {action: 'identify', data: match[1]}
       else if text.match /^\//
         viewModel.messages.push {action: 'error', data: "Bad command: #{text}"}
-      else if text.length > 0
+      else
         sendPacket {action: 'say', data: text}
   userInputProtocol()
 

@@ -5,9 +5,8 @@
     <title>Chat</title>
     <link rel="stylesheet" href="chat.css" type="text/css" />
     <script type="text/javascript" src="/socket.io/socket.io.js"></script>
-    <script type="text/javascript" src="vendor/jquery-1.9.1.min.js"></script>
-    <script type="text/javascript" src="vendor/jquery-ui-1.10.2.custom.min.js"></script>
-    <script type="text/javascript" src="vendor/knockout-2.2.1.js"></script>
+    <script type="text/javascript" src="vendor/knockout-2.2.1.min.js"></script>
+    <script type="text/javascript" src="vendor/knockout-postbox-0.2.4.min.js"></script>
     <script type="text/javascript" src="bundle.js"></script>
   </head>
   <body>
@@ -45,7 +44,7 @@
       </div>
       <div id='chat-input-box'>
         <form data-bind='submit: inputSubmitted, event: {keyup: inputKeyUp}'>
-          <input id='chat-input' type='text' data-bind='value: input, hasfocus: isInputSelected' />
+          <input id='chat-input' type='text' data-bind='value: input, hasfocus: isInputBoxSelected' />
         </form>
       </div>
     </div>
