@@ -28,9 +28,7 @@ document.addEventListener 'DOMContentLoaded', ->
     inputHistory =
       elements: ko.observableArray()
       idx: ko.observable(1)
-      push: (text) ->
-        @elements.push text
-        @escape()
+      push: (text) -> @elements.push text; @escape()
       up: -> @idx @idx() - 1 unless @idx() is 0
       down: -> @idx @idx() + 1 unless @idx() is @elements().length
       escape: -> @idx @elements().length
