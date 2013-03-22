@@ -13,7 +13,7 @@
     <h1>Chat</h1>
     <div id='chat-client'>
       <div id='chat-identity' data-bind='text: identity'></div>
-      <div id='chat-box' data-bind='foreach: {data: messages, afterAdd: highlightEffect}'>
+      <div id='chat-box' data-bind='foreach: {data: messages, afterAdd: messageAdded}'>
         <div class='notice' data-bind='if: action == "welcome"'>
           You have connected as <span class='identity' data-bind='text: data'></span>.
           Use the /nick command to rename.

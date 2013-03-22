@@ -17,7 +17,9 @@ document.addEventListener 'DOMContentLoaded', ->
     identity: ko.observable()
     members: ko.observableArray()
     messages: ko.observableArray()
-    highlightEffect: (element, index, data) -> try $(element).effect 'highlight'
+    messageAdded: (element, index, data) ->
+      element.parentNode.scrollTop = element.parentNode.scrollHeight
+      try $(element).effect 'highlight'
     input: ko.observable()
     isInputBoxSelected: ko.observable(true)
     inputSubmitted: (form) -> ko.postbox.publish 'viewModel.inputSubmitted', text if text = @input()?.trim()
