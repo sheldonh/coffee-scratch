@@ -26,6 +26,9 @@ document.addEventListener 'DOMContentLoaded', ->
     inputKeyUp: (data, event) -> ko.postbox.publish 'viewModel.inputKeyUp', event.keyCode
   ko.applyBindings viewModel
 
+  # Just for debugging in browser's JS console
+  global.viewModel = viewModel
+
   userInputProtocol = ->
     inputHistory =
       elements: ko.observableArray()
