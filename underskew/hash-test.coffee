@@ -1,17 +1,30 @@
+assert = require 'assert'
+
 class Hash
-  constructor: -> @h = {}
+  constructor: ->
+    @length = 0
+    @indexMap = {}
+    @keyStore = []
+    @valueStore = []
 
-  get: (k) -> @h[@key k]
+  get: (k) ->
+    i = @indexMap[@hashOf k]
+    @valueStore[i]
 
-  set: (k, v) -> @h[@key k] = v
+  set: (k, v) ->
+    key = @hashOf k
+    i = @indexMap[key] or @keyStore.length
+    [@indexMap[key], @keyStore[i], @valueStore[i]] = [i, k, v]
+    assert @keyStore.length is @valueStore.length, 'Hash keyStore and valueStore length mismatch'
+    @length = @keyStore.length
 
-  keys: ->
-    Object.keys(@h).map (o) ->
-      switch o
-        when 'undefined' then undefined
-        else JSON.parse o
+  keys: -> @keyStore
 
-  key: (o) ->
+  rehash: ->
+    @indexMap = {}
+    @indexMap[@hashOf @keyStore[i]] = i for i in [0...@keyStore.length]
+
+  hashOf: (o) ->
     switch typeof o
       when undefined then 'undefined'
       else "#{JSON.stringify o}"
@@ -50,6 +63,16 @@ describe 'Hash', ->
     o.set undefined, 'nullish'
     assert o.get(undefined) is 'nullish'
 
+  it 'gives number key-value pairs as length', ->
+    o = new Hash()
+    assert o.length is 0
+    o.set 'x', 'x'
+    assert o.length is 1
+    o.set 'y', 'y'
+    assert o.length is 2
+    o.set 'y', 'reused key'
+    assert o.length is 2
+
   it 'gives the undefined value for an unknown key', ->
     o = new Hash()
     o.set 'x', 'y'
@@ -73,4 +96,13 @@ describe 'Hash', ->
     assert o.keys()[0][1] is 1
     assert o.keys()[0][2] is 1
     assert o.keys()[0][3] is 2
+
+  it 'detects object changes on rehash', ->
+    o = new Hash()
+    k = {meaning: 'life'}
+    o.set k, 42
+    k.meaning = 'liff'
+    o.rehash()
+    assert o.length is 1
+    assert o.get(k) is 42
 
