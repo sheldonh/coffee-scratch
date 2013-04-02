@@ -6,24 +6,23 @@ class Hash
     @indexMap = {}
     @keyStore = []
     @valueStore = []
+    @[p] = @private[p] for p of @private
 
   isSet: (k) -> @indexMap[@hashOf k]?
 
   get: (k) ->
-    i = @indexMap[@hashOf k]
+    {i} = @keyPosition k
     @valueStore[i]
 
   set: (k, v) ->
-    key = @hashOf k
-    i = @indexMap[key]
-    i ?= @keyStore.length
+    {key, i} = @keyPosition k
     [@indexMap[key], @keyStore[i], @valueStore[i]] = [i, k, v]
     @updateLength()
     @
 
   delete: (k) ->
-    key = @hashOf k
-    if (i = @indexMap[key])?
+    {key, i} = @keyPosition k
+    unless i is @length
       delete @indexMap[key]
       @keyStore.splice(i, 1)
       @valueStore.splice(i, 1)
@@ -40,14 +39,22 @@ class Hash
     @indexMap[@hashOf @keyStore[i]] = i for i in [0...@keyStore.length]
     @
 
-  hashOf: (o) ->
-    switch typeof o
-      when undefined then 'undefined'
-      else "#{JSON.stringify o}"
+  private:
 
-  updateLength: ->
-    assert? @keyStore.length is @valueStore.length, 'Hash keyStore and valueStore lengths must match'
-    @length = @keyStore.length
+    keyPosition: (k) ->
+      key = @hashOf k
+      i = @indexMap[key]
+      i ?= @keyStore.length
+      {key: key, i: i}
+
+    hashOf: (o) ->
+      switch typeof o
+        when undefined then 'undefined'
+        else "#{JSON.stringify o}"
+
+    updateLength: ->
+      assert? @keyStore.length is @valueStore.length, 'Hash keyStore and valueStore lengths must match'
+      @length = @keyStore.length
 
 if typeof describe is 'function'
   describe 'Hash', ->
