@@ -11,50 +11,70 @@ class Hash
   isSet: (k) -> @indexMap[@hashOf k]?
 
   get: (k) ->
-    {i} = @keyPosition k
-    @valueStore[i]
+    if (i = @indexMap[@hashOf k])?
+      @valueStore[i] if i >= 0
 
   set: (k, v) ->
-    {key, i} = @keyPosition k
-    [@indexMap[key], @keyStore[i], @valueStore[i]] = [i, k, v]
-    @updateLength()
+    key = @hashOf k
+    if (i = @indexMap[key])?
+      @keyStore[i] = k
+      @valueStore[i] = v
+    else
+      @addKey key, k, v
     @
 
   delete: (k) ->
-    {key, i} = @keyPosition k
-    unless i is @length
+    key = @hashOf k
+    if (i = @indexMap[key])?
       delete @indexMap[key]
-      @keyStore.splice(i, 1)
-      @valueStore.splice(i, 1)
-      @updateLength()
+      delete @keyStore[i]
+      delete @valueStore[i]
+      @length--
     @
-
-  forEach: (handler) ->
-    handler @keyStore[i], @valueStore[i] for key, i of @indexMap
 
   keys: -> @keyStore
 
   rehash: ->
-    @indexMap = {}
-    @indexMap[@hashOf @keyStore[i]] = i for i in [0...@keyStore.length]
+    [oldIndexMap, @indexMap] = [@indexMap, {}]
+    for key, i of oldIndexMap
+      @indexMap[@hashOf @keyStore[i]] = i
     @
 
-  private:
+  dup: -> @filter -> true
 
-    keyPosition: (k) ->
-      key = @hashOf k
-      i = @indexMap[key]
-      i ?= @keyStore.length
-      {key: key, i: i}
+  forEach: (fn) ->
+    for key, i of @indexMap
+      fn @keyStore[i], @valueStore[i]
+
+  some: (test) ->
+    for key, i of @indexMap
+      return true if test @keyStore[i], @valueStore[i]
+    return false
+
+  every: (test) ->
+    for key, i of @indexMap
+      return false unless test @keyStore[i], @valueStore[i]
+    return true
+
+  filter: (test) ->
+    h = new Hash()
+    for key, i of @indexMap
+      [k, v] = [@keyStore[i], @valueStore[i]]
+      h.set(k, v) if test k, v
+    h
+
+  private:
 
     hashOf: (o) ->
       switch typeof o
         when undefined then 'undefined'
         else "#{JSON.stringify o}"
 
-    updateLength: ->
-      assert? @keyStore.length is @valueStore.length, 'Hash keyStore and valueStore lengths must match'
-      @length = @keyStore.length
+    addKey: (hashOfKey, k, v) ->
+      @indexMap[hashOfKey] = @keyStore.length
+      @keyStore.push k
+      @valueStore.push v
+      @length++
 
 if typeof describe is 'function'
   describe 'Hash', ->
@@ -62,65 +82,65 @@ if typeof describe is 'function'
     it 'allows objects as keys', ->
       o = new Hash()
       o.set {meaning: 'life'}, 42
-      assert o.get({meaning: 'life'}) is 42
+      assert.equal o.get({meaning: 'life'}), 42
 
     it 'allows arrays as keys', ->
       o = new Hash()
       o.set [0, 1, 1, 2], 'fibonacci'
-      assert o.get([0, 1, 1, 2]) is 'fibonacci'
+      assert.equal o.get([0, 1, 1, 2]), 'fibonacci'
 
     it 'allows strings as keys', ->
       o = new Hash()
       o.set 'meaning', 'life'
-      assert o.get('meaning') is 'life'
+      assert.equal o.get('meaning'), 'life'
 
     it 'allows numbers as keys', ->
       o = new Hash()
       o.set 42, 'meaning'
-      assert o.get(42) is 'meaning'
+      assert.equal o.get(42), 'meaning'
 
     it 'allows null as a key', ->
       o = new Hash()
       o.set null, 'nullish'
-      assert o.get(null) is 'nullish'
+      assert.equal o.get(null), 'nullish'
 
     it 'allows undefined as a key', ->
       o = new Hash()
       o.set undefined, 'nullish'
-      assert o.get(undefined) is 'nullish'
+      assert.equal o.get(undefined), 'nullish'
 
     it 'gives number of key-value pairs as length', ->
       o = new Hash()
-      assert o.length is 0
+      assert.equal o.length, 0
       o.set 'x', 'x'
-      assert o.length is 1
+      assert.equal o.length, 1
       o.set 'y', 'y'
-      assert o.length is 2
+      assert.equal o.length, 2
       o.set 'y', 'reused key'
-      assert o.length is 2
+      assert.equal o.length, 2
 
     it 'gives the undefined value for an unknown key', ->
       o = new Hash()
       o.set 'x', 'y'
-      assert o.get('z') is undefined
+      assert.equal o.get('z'), undefined
 
     it 'detects the presence of a key', ->
       o = new Hash()
-      assert o.isSet('x') is false
+      assert.equal o.isSet('x'), false
       o.set('x', 'x-ray')
-      assert o.isSet('x') is true
-      assert o.isSet(undefined) is false
+      assert.equal o.isSet('x'), true
+      assert.equal o.isSet(undefined), false
       o.set(undefined, 'magic')
-      assert o.isSet(undefined) is true
+      assert.equal o.isSet(undefined), true
       o.delete(undefined)
-      assert o.isSet(undefined) is false
+      assert.equal o.isSet(undefined), false
 
     it 'resets the value of an already set key', ->
       o = new Hash()
       o.set 'my', 'first'
       o.set 'my', 'last'
-      assert o.length is 1
-      assert o.get('my') is 'last'
+      assert.equal o.length, 1
+      assert.equal o.get('my'), 'last'
 
     it 'gives keys back exactly as they were entered', ->
       [{meaning: 'life'}, [0, 1, 1, 2], 'meaning', 42, null, undefined].forEach (k) ->
@@ -134,22 +154,24 @@ if typeof describe is 'function'
       o.set k, 42
       o.set 'last', 'omega'
       k.meaning = 'liff'
-      assert o.get(k) is undefined
+      assert.equal o.get(k), undefined
       o.rehash()
-      assert o.length is 2
-      assert o.get(k) is 42
+      assert.equal o.length, 2
+      assert.equal o.get(k), 42
 
     it 'deletes key-value pairs', ->
       o = new Hash()
-      o.set 'first', 'alpha'
-      o.set 'unwanted', 'beta'
+      o.set 'x', 'x-ray'
+      o.set 'y', 'yoda'
+      o.set 'z', 'zombie'
       for i in [1..2]
-        o.delete 'unwanted'
-        assert o.length is 1
-        assert o.get('key') is undefined
-      o.set 'last', 'gamma'
-      assert o.length is 2
-      assert o.get('last') is 'gamma'
+        o.delete 'y'
+        assert.equal o.length, 2
+        assert.equal o.get('y'), undefined
+      assert.equal o.get('z'), 'zombie'
+      o.set '!', 'omega'
+      assert o.length is 3, "o.length is 3"
+      assert o.get('!') is 'omega', "o.get('!') is 'omega'"
 
     it 'daisy-chains set(), delete() and rehash()', ->
       o = new Hash()
@@ -167,5 +189,28 @@ if typeof describe is 'function'
         seenValues.push v
       assert.deepEqual seenKeys, [{meaning: 'life'}, 'x', undefined]
       assert.deepEqual seenValues, [42, 'x-ray', 'magic']
+
+    it 'detects if at least one key-value pair passes a function', ->
+      o = new Hash()
+      o.set 'a', 'alpha'
+      o.set 'b', 'beta'
+      assert o.some((k, v) -> k is 'a' and v is 'alpha') is true
+      assert o.some((k, v) -> k is 'b' and v is 'gamma') is false
+      assert o.some((k, v) -> k is 'g' and v is 'beta') is false
+
+    it 'detects if all key-value pairs pass a function', ->
+      o = new Hash()
+      o.set 'a', 'alpha'
+      o.set 'b', 'beta'
+      assert o.every((k, v) -> k is 'a' or k is 'b') is true
+      assert o.every((k, v) -> v is 'alpha' or v is 'beta') is true
+      assert o.every((k, v) -> k is 'a') is false
+
+    it 'creates a new hash with all key-value pairs that pass a function', ->
+      o = new Hash()
+      o.set 'a', 'alpha'
+      o.set 'b', 'beta'
+      assert.deepEqual o.filter((k, v) -> v.indexOf 'a' >= 0), o
+      assert.deepEqual o.filter((k, v) -> k is 'b'), new Hash().set('b', 'beta')
 
 exports.Hash = Hash
