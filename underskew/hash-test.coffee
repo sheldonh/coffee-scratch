@@ -78,30 +78,18 @@ describe 'Hash', ->
     o.set 'x', 'y'
     assert o.get('z') is undefined
 
-  it 'gives scalar keys back as they were entered', ->
-    ['meaning', 42, null, undefined].forEach (k) ->
+  it 'gives keys back exactly as they were entered', ->
+    [{meaning: 'life'}, [0, 1, 1, 2], 'meaning', 42, null, undefined].forEach (k) ->
       o = new Hash()
       o.set k, 'some value'
-      assert o.keys()[0] is k
-
-  it 'gives object keys back as they were entered', ->
-    o = new Hash()
-    o.set {meaning: 'life'}, 'objecty'
-    assert o.keys()[0]['meaning'] is 'life'
-
-  it 'gives array keys back as they were entered', ->
-    o = new Hash()
-    o.set [0, 1, 1, 2], 'arrayish'
-    assert o.keys()[0][0] is 0
-    assert o.keys()[0][1] is 1
-    assert o.keys()[0][2] is 1
-    assert o.keys()[0][3] is 2
+      assert.deepEqual o.keys()[0], k
 
   it 'detects object changes on rehash', ->
     o = new Hash()
     k = {meaning: 'life'}
     o.set k, 42
     k.meaning = 'liff'
+    assert o.get(k) is undefined
     o.rehash()
     assert o.length is 1
     assert o.get(k) is 42
