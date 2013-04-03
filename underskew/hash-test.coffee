@@ -1,6 +1,6 @@
 assert = require 'assert'
 
-class JsonHasher
+class JsonKeyMaker
   constructor: -> @hash undefined
 
   hash: (o) ->
@@ -9,6 +9,23 @@ class JsonHasher
     @lastHash = switch typeof o
       when undefined then 'undefined'
       else "#{JSON.stringify o}"
+
+class KeyIndexMap
+  constructor: (@keyMaker = new JsonKeyMaker()) ->
+    @map = {}
+
+  indexes: ->
+    a = []
+    a.push i for k, i of @map
+    a
+
+  get: (k) -> @map[@safeKey k]
+
+  set: (k, i) -> @map[@safeKey k] = i
+
+  delete: (k) -> delete @map[@safeKey k]
+
+  safeKey: (o) -> @keyMaker.hash o
 
 class KeyValueStore
   constructor: ->
@@ -34,70 +51,60 @@ class KeyValueStore
     delete @valueStore[i]
 
 class Hash
-  constructor: (@hasher = new JsonHasher()) ->
+  constructor: ->
     @length = 0
-    @indexMap = {}
+    @indexMap = new KeyIndexMap()
     @store = new KeyValueStore()
-    @[p] = @private[p] for p of @private
 
-  isSet: (k) -> @indexOf(k)?
+  isSet: (k) -> @indexMap.get(k)?
 
-  get: (k) -> @store.valueAt @indexOf(k)
+  get: (k) -> @store.valueAt @indexMap.get(k)
 
   set: (k, v) ->
     if @isSet k
-      @store.set @indexOf(k), k, v
+      @store.set @indexMap.get(k), k, v
     else
-      @append k, v
+      @indexMap.set k, @store.append(k, v)
+      @length++
     @
 
   delete: (k) ->
     if @isSet k
-      @store.delete @indexOf(k)
-      delete @indexMap[@hashOf k]
+      @store.delete @indexMap.get(k)
+      @indexMap.delete k
       @length--
     @
 
   keys: -> @store.keyStore
 
   rehash: ->
-    [oldIndexMap, @indexMap] = [@indexMap, {}]
-    for key, i of oldIndexMap
-      @indexMap[@hashOf @store.keyAt i] = i
+    [oldindexMap, @indexMap] = [@indexMap, new KeyIndexMap()]
+    for i in oldindexMap.indexes()
+      @indexMap.set @store.keyAt(i), i
     @
 
   dup: -> @filter -> true
 
   forEach: (fn) ->
-    for key, i of @indexMap
+    for i of @indexMap.indexes()
       fn @store.keyAt(i), @store.valueAt(i)
 
   some: (test) ->
-    for key, i of @indexMap
+    for i of @indexMap.indexes()
       return true if test @store.keyAt(i), @store.valueAt(i)
     return false
 
   every: (test) ->
-    for key, i of @indexMap
+    for i of @indexMap.indexes()
       return false unless test @store.keyAt(i), @store.valueAt(i)
     return true
 
   filter: (test) ->
     h = new Hash()
-    for key, i of @indexMap
+    for i of @indexMap.indexes()
       [k, v] = [@store.keyAt(i), @store.valueAt(i)]
       h.set(k, v) if test k, v
     h
-
-  private:
-
-    indexOf: (k) -> @indexMap[@hashOf k]
-
-    hashOf: (o) -> @hasher.hash o
-
-    append: (k, v) ->
-      @indexMap[@hashOf k] = @store.append k, v
-      @length++
 
 if typeof describe is 'function'
   describe 'Hash', ->
