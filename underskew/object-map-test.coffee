@@ -121,6 +121,16 @@ if typeof describe is 'function'
       assert.deepEqual seenKeys, [{meaning: 'life'}, 'x', undefined]
       assert.deepEqual seenValues, [42, 'x-ray', 'magic']
 
+    it 'iterates until stopped', ->
+      o = new ObjectMap()
+      o.set 'x', 'x-ray'
+      o.set 'y', 'yoda'
+      o.set 'z', 'zombie'
+      seen = {}
+      o.each (k, v) ->
+        if k is 'z' then false else seen[k] = v
+      assert.deepEqual seen, {x: 'x-ray', y: 'yoda'}
+
     it 'detects if at least one key-value pair passes a function', ->
       o = new ObjectMap()
       o.set 'a', 'alpha'
@@ -145,11 +155,4 @@ if typeof describe is 'function'
       assert.deepEqual [all.get('a'), all.get('b')], ['alpha', 'beta']
       some = o.filter (k, v) -> k is 'b'
       assert.deepEqual [some.get('a'), some.get('b')], [undefined, 'beta']
-
-    it 'injects', ->
-      o = new ObjectMap().set('a', 'alpha').set('b', 'beta')
-      t = {'g': 'gamma'}
-      r = o.inject t, (m, k, v) -> m[k] = v if k is 'a'; m
-      assert.deepEqual t, {a: 'alpha', g: 'gamma'}
-      assert.deepEqual r, t
 

@@ -86,28 +86,23 @@ class ObjectMap
 
   dup: -> @filter -> true
 
-  forEach: (fn) ->
+  each: (fn) ->
     for i of @indexMap.indexes()
-      fn @store.keyAt(i), @store.valueAt(i)
+      return false if fn(@store.keyAt(i), @store.valueAt(i)) is false
+    true
+
+  forEach: (fn) ->
+    @each (k, v) -> fn(k, v); true
 
   some: (test) ->
-    for i of @indexMap.indexes()
-      return true if test @store.keyAt(i), @store.valueAt(i)
-    return false
+    !@each (k, v) -> !test(k, v)
 
   every: (test) ->
-    for i of @indexMap.indexes()
-      return false unless test @store.keyAt(i), @store.valueAt(i)
-    return true
+    !!@each (k, v) -> !!test(k, v)
 
   filter: (test) ->
-    @inject new ObjectMap(), (m, k, v) ->
-      m.set(k, v) if test(k, v)
-      m
-
-  inject: (m, fn) ->
-    for i of @indexMap.indexes()
-      m = fn m, @store.keyAt(i), @store.valueAt(i)
+    m = new ObjectMap()
+    @forEach (k, v) -> m.set(k, v) if test(k, v)
     m
 
 module.exports = ObjectMap
