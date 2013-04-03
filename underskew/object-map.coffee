@@ -1,53 +1,3 @@
-class JsonKeyMaker
-  constructor: -> @make undefined
-
-  make: (o) ->
-    return @lastKey if o is @lastObject
-    @lastObject = o
-    @lastKey = switch typeof o
-      when undefined then 'undefined'
-      else "#{JSON.stringify o}"
-
-class KeyIndexMap
-  constructor: (@keyMaker) ->
-    @map = {}
-
-  indexes: ->
-    a = []
-    a.push i for k, i of @map
-    a
-
-  get: (k) -> @map[@safeKey k]
-
-  set: (k, i) -> @map[@safeKey k] = i
-
-  delete: (k) -> delete @map[@safeKey k]
-
-  safeKey: (o) -> @keyMaker.make o
-
-class KeyValueStore
-  constructor: ->
-    @keyStore = []
-    @valueStore = []
-
-  keyAt: (i) -> @keyStore[i]
-
-  valueAt: (i) -> @valueStore[i]
-
-  set: (i, k, v) ->
-    @keyStore[i] = k
-    @valueStore[i] = v
-
-  append: (k, v) ->
-    i = @keyStore.length
-    @keyStore.push k
-    @valueStore.push v
-    i
-
-  delete: (i) ->
-    delete @keyStore[i]
-    delete @valueStore[i]
-
 class ObjectMap
   constructor: ->
     @length = 0
@@ -55,13 +5,13 @@ class ObjectMap
     @indexMap = @newKeyIndexMap()
     @store = new KeyValueStore()
 
-  isSet: (k) -> @indexMap.get(k)?
+  isSet: (k) -> @indexMap.indexOf(k)?
 
-  get: (k) -> @store.valueAt @indexMap.get(k)
+  get: (k) -> @store.valueAt @indexMap.indexOf(k)
 
   set: (k, v) ->
     if @isSet k
-      @store.set @indexMap.get(k), k, v
+      @store.set @indexMap.indexOf(k), k, v
     else
       @indexMap.set k, @store.append(k, v)
       @length++
@@ -69,7 +19,7 @@ class ObjectMap
 
   delete: (k) ->
     if @isSet k
-      @store.delete @indexMap.get(k)
+      @store.delete @indexMap.indexOf(k)
       @indexMap.delete k
       @length--
     @
@@ -104,5 +54,55 @@ class ObjectMap
     m = new ObjectMap()
     @forEach (k, v) -> m.set(k, v) if test(k, v)
     m
+
+class KeyIndexMap
+  constructor: (@keyMaker) ->
+    @map = {}
+
+  indexes: ->
+    a = []
+    a.push i for k, i of @map
+    a
+
+  indexOf: (k) -> @map[@safeKey k]
+
+  set: (k, i) -> @map[@safeKey k] = i
+
+  delete: (k) -> delete @map[@safeKey k]
+
+  safeKey: (o) -> @keyMaker.make o
+
+class KeyValueStore
+  constructor: ->
+    @keyStore = []
+    @valueStore = []
+
+  keyAt: (i) -> @keyStore[i]
+
+  valueAt: (i) -> @valueStore[i]
+
+  set: (i, k, v) ->
+    @keyStore[i] = k
+    @valueStore[i] = v
+
+  append: (k, v) ->
+    i = @keyStore.length
+    @keyStore.push k
+    @valueStore.push v
+    i
+
+  delete: (i) ->
+    delete @keyStore[i]
+    delete @valueStore[i]
+
+class JsonKeyMaker
+  constructor: -> @make undefined
+
+  make: (o) ->
+    return @lastKey if o is @lastObject
+    @lastObject = o
+    @lastKey = switch typeof o
+      when undefined then 'undefined'
+      else "#{JSON.stringify o}"
 
 module.exports = ObjectMap
