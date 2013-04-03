@@ -1,79 +1,102 @@
 assert = require 'assert'
 
-class Hash
+class JsonHasher
+  constructor: -> @hash undefined
+
+  hash: (o) ->
+    return @lastHash if o is @lastHashed
+    @lastHashed = o
+    @lastHash = switch typeof o
+      when undefined then 'undefined'
+      else "#{JSON.stringify o}"
+
+class KeyValueStore
   constructor: ->
-    @length = 0
-    @indexMap = {}
     @keyStore = []
     @valueStore = []
+
+  keyAt: (i) -> @keyStore[i]
+
+  valueAt: (i) -> @valueStore[i]
+
+  set: (i, k, v) ->
+    @keyStore[i] = k
+    @valueStore[i] = v
+
+  append: (k, v) ->
+    i = @keyStore.length
+    @keyStore.push k
+    @valueStore.push v
+    i
+
+  delete: (i) ->
+    delete @keyStore[i]
+    delete @valueStore[i]
+
+class Hash
+  constructor: (@hasher = new JsonHasher()) ->
+    @length = 0
+    @indexMap = {}
+    @store = new KeyValueStore()
     @[p] = @private[p] for p of @private
 
-  isSet: (k) -> @indexMap[@hashOf k]?
+  isSet: (k) -> @indexOf(k)?
 
-  get: (k) ->
-    if (i = @indexMap[@hashOf k])?
-      @valueStore[i] if i >= 0
+  get: (k) -> @store.valueAt @indexOf(k)
 
   set: (k, v) ->
-    key = @hashOf k
-    if (i = @indexMap[key])?
-      @keyStore[i] = k
-      @valueStore[i] = v
+    if @isSet k
+      @store.set @indexOf(k), k, v
     else
-      @addKey key, k, v
+      @append k, v
     @
 
   delete: (k) ->
-    key = @hashOf k
-    if (i = @indexMap[key])?
-      delete @indexMap[key]
-      delete @keyStore[i]
-      delete @valueStore[i]
+    if @isSet k
+      @store.delete @indexOf(k)
+      delete @indexMap[@hashOf k]
       @length--
     @
 
-  keys: -> @keyStore
+  keys: -> @store.keyStore
 
   rehash: ->
     [oldIndexMap, @indexMap] = [@indexMap, {}]
     for key, i of oldIndexMap
-      @indexMap[@hashOf @keyStore[i]] = i
+      @indexMap[@hashOf @store.keyAt i] = i
     @
 
   dup: -> @filter -> true
 
   forEach: (fn) ->
     for key, i of @indexMap
-      fn @keyStore[i], @valueStore[i]
+      fn @store.keyAt(i), @store.valueAt(i)
 
   some: (test) ->
     for key, i of @indexMap
-      return true if test @keyStore[i], @valueStore[i]
+      return true if test @store.keyAt(i), @store.valueAt(i)
     return false
 
   every: (test) ->
     for key, i of @indexMap
-      return false unless test @keyStore[i], @valueStore[i]
+      return false unless test @store.keyAt(i), @store.valueAt(i)
     return true
 
   filter: (test) ->
     h = new Hash()
     for key, i of @indexMap
-      [k, v] = [@keyStore[i], @valueStore[i]]
+      [k, v] = [@store.keyAt(i), @store.valueAt(i)]
       h.set(k, v) if test k, v
     h
 
   private:
 
-    hashOf: (o) ->
-      switch typeof o
-        when undefined then 'undefined'
-        else "#{JSON.stringify o}"
+    indexOf: (k) -> @indexMap[@hashOf k]
 
-    addKey: (hashOfKey, k, v) ->
-      @indexMap[hashOfKey] = @keyStore.length
-      @keyStore.push k
-      @valueStore.push v
+    hashOf: (o) -> @hasher.hash o
+
+    append: (k, v) ->
+      @indexMap[@hashOf k] = @store.append k, v
       @length++
 
 if typeof describe is 'function'
@@ -170,8 +193,8 @@ if typeof describe is 'function'
         assert.equal o.get('y'), undefined
       assert.equal o.get('z'), 'zombie'
       o.set '!', 'omega'
-      assert o.length is 3, "o.length is 3"
-      assert o.get('!') is 'omega', "o.get('!') is 'omega'"
+      assert.equal o.length, 3
+      assert.equal o.get('!'), 'omega'
 
     it 'daisy-chains set(), delete() and rehash()', ->
       o = new Hash()
@@ -194,17 +217,17 @@ if typeof describe is 'function'
       o = new Hash()
       o.set 'a', 'alpha'
       o.set 'b', 'beta'
-      assert o.some((k, v) -> k is 'a' and v is 'alpha') is true
-      assert o.some((k, v) -> k is 'b' and v is 'gamma') is false
-      assert o.some((k, v) -> k is 'g' and v is 'beta') is false
+      assert.equal o.some((k, v) -> k is 'a' and v is 'alpha'), true
+      assert.equal o.some((k, v) -> k is 'b' and v is 'gamma'), false
+      assert.equal o.some((k, v) -> k is 'g' and v is 'beta'), false
 
     it 'detects if all key-value pairs pass a function', ->
       o = new Hash()
       o.set 'a', 'alpha'
       o.set 'b', 'beta'
-      assert o.every((k, v) -> k is 'a' or k is 'b') is true
-      assert o.every((k, v) -> v is 'alpha' or v is 'beta') is true
-      assert o.every((k, v) -> k is 'a') is false
+      assert.equal o.every((k, v) -> k is 'a' or k is 'b'), true
+      assert.equal o.every((k, v) -> v is 'alpha' or v is 'beta'), true
+      assert.equal o.every((k, v) -> k is 'a'), false
 
     it 'creates a new hash with all key-value pairs that pass a function', ->
       o = new Hash()
